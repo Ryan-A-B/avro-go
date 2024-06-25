@@ -1,0 +1,35 @@
+[
+    "null",
+    {
+        "type": "record",
+        "name": "record",
+        "fields": [
+            {
+                "name": "name",
+                "type": "string"
+            }
+        ]
+    },
+    {
+        "type": "enum",
+        "name": "ABC",
+        "symbols": [
+            "A",
+            "B",
+            "C"
+        ]
+    },
+    {
+        "type": "array",
+        "items": "string"
+    },
+    {
+        "type": "map",
+        "values": "string"
+    },
+    {
+        "type": "fixed",
+        "name": "chunk",
+        "size": 16
+    }
+]

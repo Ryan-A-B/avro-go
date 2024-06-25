@@ -1,0 +1,9 @@
+{
+    "type": "enum",
+    "name": "SimpleEnum",
+    "symbols": [
+        "A",
+        "B",
+        "C"
+    ]
+}

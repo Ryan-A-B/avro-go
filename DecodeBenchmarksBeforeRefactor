@@ -1,0 +1,4 @@
+BenchmarkString-12              17618760                61.5 ns/op
+BenchmarkArray-12               14656214                82.6 ns/op
+BenchmarkDecodeRecord-12         4230969               289 ns/op
+BenchmarkUnion-12               11213526                95.6 ns/op

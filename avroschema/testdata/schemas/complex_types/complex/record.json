@@ -1,0 +1,26 @@
+{
+    "type": "record",
+    "name": "ComplexRecord",
+    "fields": [
+        {
+            "type": "float",
+            "name": "required_float"
+        },
+        {
+            "type": ["null", "string"],
+            "name": "optional_string"
+        },
+        {
+            "type": {
+                "type": "enum",
+                "name": "ABC",
+                "symbols": [
+                    "A",
+                    "B",
+                    "C"
+                ]
+            },
+            "name": "enum"
+        }
+    ]
+}
