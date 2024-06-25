@@ -91,38 +91,38 @@ func TestDecoder(t *testing.T) {
 					So(value.Name, ShouldEqual, "foo")
 					So(value.Age, ShouldEqual, 42)
 				})
-				// 		Convey("enum", func() {
-				// 			schema := &avroschema.Enum{
-				// 				SchemaBase: avroschema.SchemaBase{
-				// 					Type: avroschema.AvroTypeEnum,
-				// 				},
-				// 				NamedType: avroschema.NamedType{
-				// 					Name: "SimpleEnum",
-				// 				},
-				// 				Symbols: []string{"A", "B", "C"},
-				// 			}
-				// 			Convey("A", func() {
-				// 				data := []byte{0x00}
-				// 				var value string
-				// 				err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(&value)
-				// 				So(err, ShouldBeNil)
-				// 				So(value, ShouldEqual, "A")
-				// 			})
-				// 			Convey("B", func() {
-				// 				data := []byte{0x02}
-				// 				var value string
-				// 				err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(&value)
-				// 				So(err, ShouldBeNil)
-				// 				So(value, ShouldEqual, "B")
-				// 			})
-				// 			Convey("C", func() {
-				// 				data := []byte{0x04}
-				// 				var value string
-				// 				err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(&value)
-				// 				So(err, ShouldBeNil)
-				// 				So(value, ShouldEqual, "C")
-				// 			})
-				// 		})
+				Convey("enum", func() {
+					schema := &avroschema.Enum{
+						SchemaBase: avroschema.SchemaBase{
+							Type: avroschema.AvroTypeEnum,
+						},
+						NamedType: avroschema.NamedType{
+							Name: "SimpleEnum",
+						},
+						Symbols: []string{"A", "B", "C"},
+					}
+					Convey("A", func() {
+						data := []byte{0x00}
+						var value string
+						err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(&value)
+						So(err, ShouldBeNil)
+						So(value, ShouldEqual, "A")
+					})
+					Convey("B", func() {
+						data := []byte{0x02}
+						var value string
+						err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(&value)
+						So(err, ShouldBeNil)
+						So(value, ShouldEqual, "B")
+					})
+					Convey("C", func() {
+						data := []byte{0x04}
+						var value string
+						err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(&value)
+						So(err, ShouldBeNil)
+						So(value, ShouldEqual, "C")
+					})
+				})
 				Convey("array", func() {
 					Convey("boolean", func() {
 						schema := &avroschema.Array{
@@ -343,6 +343,27 @@ func TestDecoder(t *testing.T) {
 						So(err, ShouldBeNil)
 						So(people, ShouldResemble, []Person{{"foo", 42}, {"bar", 43}})
 					})
+					Convey("nested enum", func() {
+						array := avroschema.Array{
+							SchemaBase: avroschema.SchemaBase{
+								Type: avroschema.AvroTypeArray,
+							},
+							Items: &avroschema.Enum{
+								SchemaBase: avroschema.SchemaBase{
+									Type: avroschema.AvroTypeEnum,
+								},
+								NamedType: avroschema.NamedType{
+									Name: "SimpleEnum",
+								},
+								Symbols: []string{"A", "B", "C"},
+							},
+						}
+						data := []byte{0x08, 0x02, 0x04, 0x00, 0x02, 0x00}
+						var value []string
+						err := avro.NewDecoder(bytes.NewReader(data), &array).Decode(&value)
+						So(err, ShouldBeNil)
+						So(value, ShouldResemble, []string{"B", "C", "A", "B"})
+					})
 					Convey("nested array", func() {
 						array := avroschema.Array{
 							SchemaBase: avroschema.SchemaBase{
@@ -365,6 +386,18 @@ func TestDecoder(t *testing.T) {
 			})
 		})
 	})
+}
+
+func BenchmarkDecodeInt(b *testing.B) {
+	schema := avroschema.AvroTypeInt
+	var buffer bytes.Buffer
+	decoder := avro.NewDecoder(&buffer, schema)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var value int32
+		buffer.Write([]byte{0x54})
+		decoder.Decode(&value)
+	}
 }
 
 func BenchmarkDecodeString(b *testing.B) {

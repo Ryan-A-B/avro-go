@@ -48,7 +48,7 @@ func getDecodeFuncForSchema(schema avroschema.Schema) decodeFunc {
 		avroRecord := schema.(*avroschema.Record)
 		return getDecodeFuncForRecord(avroRecord)
 	case avroschema.AvroTypeEnum:
-		panic("enum not implemented")
+		return getDecodeFuncForEnum(schema.(*avroschema.Enum))
 	case avroschema.AvroTypeArray:
 		avroArray := schema.(*avroschema.Array)
 		return getDecodeFuncForArray(avroArray)
@@ -101,6 +101,23 @@ func getDecodeFuncForRecord(schema *avroschema.Record) decodeFunc {
 	}
 }
 
+func getDecodeFuncForEnum(schema *avroschema.Enum) decodeFunc {
+	symbols := schema.Symbols
+	return func(reader Reader, v interface{}) (err error) {
+		value := v.(*string)
+		index, err := binary.ReadVarint(reader)
+		if err != nil {
+			return
+		}
+		if index < 0 || int(index) >= len(symbols) {
+			err = fmt.Errorf("invalid enum index %d", index)
+			return
+		}
+		*value = symbols[index]
+		return
+	}
+}
+
 func getDecodeFuncForArray(schema *avroschema.Array) decodeFunc {
 	switch schema.Items.GetType() {
 	case avroschema.AvroTypeBoolean:
@@ -120,11 +137,21 @@ func getDecodeFuncForArray(schema *avroschema.Array) decodeFunc {
 	case avroschema.AvroTypeRecord:
 		decode := getDecodeFuncForRecord(schema.Items.(*avroschema.Record))
 		return getDecodeFuncForComplexArray(decode)
+	case avroschema.AvroTypeEnum:
+		decode := getDecodeFuncForEnum(schema.Items.(*avroschema.Enum))
+		return getDecodeFuncForComplexArray(decode)
 	case avroschema.AvroTypeArray:
 		decode := getDecodeFuncForArray(schema.Items.(*avroschema.Array))
 		return getDecodeFuncForComplexArray(decode)
+	case avroschema.AvroTypeMap:
+		panic("map not implemented")
+	case avroschema.AvroTypeFixed:
+		panic("fixed not implemented")
+	case avroschema.AvroTypeUnion:
+		panic("union not implemented")
+	default:
+		panic("unknown type")
 	}
-	return nil
 }
 
 func getDecodeFuncForComplexArray(decode decodeFunc) decodeFunc {
