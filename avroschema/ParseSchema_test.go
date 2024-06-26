@@ -1,7 +1,7 @@
 package avroschema_test
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -13,30 +13,38 @@ func TestParseSchema(t *testing.T) {
 	Convey("TestParseSchema", t, func() {
 		Convey("primitive types", func() {
 			Convey("string", func() {
-				data, err := ioutil.ReadFile("testdata/schemas/primitive_types/string.json")
+				file, err := os.Open("testdata/schemas/primitive_types/string.json")
 				So(err, ShouldBeNil)
-				schema, err := avroschema.ParseSchema(data)
+				schema, err := avroschema.ReadSchema(file)
+				So(err, ShouldBeNil)
+				err = file.Close()
 				So(err, ShouldBeNil)
 				So(schema.GetType(), ShouldEqual, avroschema.AvroTypeString)
 			})
 			Convey("int", func() {
-				data, err := ioutil.ReadFile("testdata/schemas/primitive_types/int.json")
+				file, err := os.Open("testdata/schemas/primitive_types/int.json")
 				So(err, ShouldBeNil)
-				schema, err := avroschema.ParseSchema(data)
+				schema, err := avroschema.ReadSchema(file)
+				So(err, ShouldBeNil)
+				err = file.Close()
 				So(err, ShouldBeNil)
 				So(schema.GetType(), ShouldEqual, avroschema.AvroTypeInt)
 			})
 			Convey("long", func() {
-				data, err := ioutil.ReadFile("testdata/schemas/primitive_types/long.json")
+				file, err := os.Open("testdata/schemas/primitive_types/long.json")
 				So(err, ShouldBeNil)
-				schema, err := avroschema.ParseSchema(data)
+				schema, err := avroschema.ReadSchema(file)
+				So(err, ShouldBeNil)
+				err = file.Close()
 				So(err, ShouldBeNil)
 				So(schema.GetType(), ShouldEqual, avroschema.AvroTypeLong)
 			})
 			Convey("float", func() {
-				data, err := ioutil.ReadFile("testdata/schemas/primitive_types/float.json")
+				file, err := os.Open("testdata/schemas/primitive_types/float.json")
 				So(err, ShouldBeNil)
-				schema, err := avroschema.ParseSchema(data)
+				schema, err := avroschema.ReadSchema(file)
+				So(err, ShouldBeNil)
+				err = file.Close()
 				So(err, ShouldBeNil)
 				So(schema.GetType(), ShouldEqual, avroschema.AvroTypeFloat)
 			})
@@ -44,9 +52,11 @@ func TestParseSchema(t *testing.T) {
 		Convey("complex types", func() {
 			Convey("simple", func() {
 				Convey("record", func() {
-					data, err := ioutil.ReadFile("testdata/schemas/complex_types/simple/record.json")
+					file, err := os.Open("testdata/schemas/complex_types/simple/record.json")
 					So(err, ShouldBeNil)
-					schema, err := avroschema.ParseSchema(data)
+					schema, err := avroschema.ReadSchema(file)
+					So(err, ShouldBeNil)
+					err = file.Close()
 					So(err, ShouldBeNil)
 					So(schema.GetType(), ShouldEqual, avroschema.AvroTypeRecord)
 					record := schema.(*avroschema.Record)
@@ -57,9 +67,11 @@ func TestParseSchema(t *testing.T) {
 					So(field.Type.GetType(), ShouldEqual, avroschema.AvroTypeString)
 				})
 				Convey("enum", func() {
-					data, err := ioutil.ReadFile("testdata/schemas/complex_types/simple/enum.json")
+					file, err := os.Open("testdata/schemas/complex_types/simple/enum.json")
 					So(err, ShouldBeNil)
-					schema, err := avroschema.ParseSchema(data)
+					schema, err := avroschema.ReadSchema(file)
+					So(err, ShouldBeNil)
+					err = file.Close()
 					So(err, ShouldBeNil)
 					So(schema.GetType(), ShouldEqual, avroschema.AvroTypeEnum)
 					enum := schema.(*avroschema.Enum)
@@ -67,27 +79,33 @@ func TestParseSchema(t *testing.T) {
 					So(enum.Symbols, ShouldResemble, []string{"A", "B", "C"})
 				})
 				Convey("array", func() {
-					data, err := ioutil.ReadFile("testdata/schemas/complex_types/simple/array.json")
+					file, err := os.Open("testdata/schemas/complex_types/simple/array.json")
 					So(err, ShouldBeNil)
-					schema, err := avroschema.ParseSchema(data)
+					schema, err := avroschema.ReadSchema(file)
+					So(err, ShouldBeNil)
+					err = file.Close()
 					So(err, ShouldBeNil)
 					So(schema.GetType(), ShouldEqual, avroschema.AvroTypeArray)
 					avroArray := schema.(*avroschema.Array)
 					So(avroArray.Items.GetType(), ShouldEqual, avroschema.AvroTypeString)
 				})
 				Convey("map", func() {
-					data, err := ioutil.ReadFile("testdata/schemas/complex_types/simple/map.json")
+					file, err := os.Open("testdata/schemas/complex_types/simple/map.json")
 					So(err, ShouldBeNil)
-					schema, err := avroschema.ParseSchema(data)
+					schema, err := avroschema.ReadSchema(file)
+					So(err, ShouldBeNil)
+					err = file.Close()
 					So(err, ShouldBeNil)
 					So(schema.GetType(), ShouldEqual, avroschema.AvroTypeMap)
 					avroMap := schema.(*avroschema.Map)
 					So(avroMap.Values.GetType(), ShouldEqual, avroschema.AvroTypeString)
 				})
 				Convey("fixed", func() {
-					data, err := ioutil.ReadFile("testdata/schemas/complex_types/simple/fixed.json")
+					file, err := os.Open("testdata/schemas/complex_types/simple/fixed.json")
 					So(err, ShouldBeNil)
-					schema, err := avroschema.ParseSchema(data)
+					schema, err := avroschema.ReadSchema(file)
+					So(err, ShouldBeNil)
+					err = file.Close()
 					So(err, ShouldBeNil)
 					So(schema.GetType(), ShouldEqual, avroschema.AvroTypeFixed)
 					fixed := schema.(*avroschema.Fixed)
@@ -95,9 +113,11 @@ func TestParseSchema(t *testing.T) {
 					So(fixed.Size, ShouldEqual, 16)
 				})
 				Convey("union", func() {
-					data, err := ioutil.ReadFile("testdata/schemas/complex_types/simple/union.json")
+					file, err := os.Open("testdata/schemas/complex_types/simple/union.json")
 					So(err, ShouldBeNil)
-					schema, err := avroschema.ParseSchema(data)
+					schema, err := avroschema.ReadSchema(file)
+					So(err, ShouldBeNil)
+					err = file.Close()
 					So(err, ShouldBeNil)
 					So(schema.GetType(), ShouldEqual, avroschema.AvroTypeUnion)
 					union := schema.(avroschema.Union)
@@ -108,9 +128,11 @@ func TestParseSchema(t *testing.T) {
 			})
 			Convey("complex", func() {
 				Convey("record", func() {
-					data, err := ioutil.ReadFile("testdata/schemas/complex_types/complex/record.json")
+					file, err := os.Open("testdata/schemas/complex_types/complex/record.json")
 					So(err, ShouldBeNil)
-					schema, err := avroschema.ParseSchema(data)
+					schema, err := avroschema.ReadSchema(file)
+					So(err, ShouldBeNil)
+					err = file.Close()
 					So(err, ShouldBeNil)
 					So(schema.GetType(), ShouldEqual, avroschema.AvroTypeRecord)
 					record := schema.(*avroschema.Record)
@@ -138,9 +160,11 @@ func TestParseSchema(t *testing.T) {
 					So(enum.Symbols, ShouldResemble, []string{"A", "B", "C"})
 				})
 				Convey("union", func() {
-					data, err := ioutil.ReadFile("testdata/schemas/complex_types/complex/union.json")
+					file, err := os.Open("testdata/schemas/complex_types/complex/union.json")
 					So(err, ShouldBeNil)
-					schema, err := avroschema.ParseSchema(data)
+					schema, err := avroschema.ReadSchema(file)
+					So(err, ShouldBeNil)
+					err = file.Close()
 					So(err, ShouldBeNil)
 					So(schema.GetType(), ShouldEqual, avroschema.AvroTypeUnion)
 					union := schema.(avroschema.Union)

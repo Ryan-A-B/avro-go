@@ -3,9 +3,23 @@ package avroschema
 import (
 	"encoding/json"
 	"errors"
+	"io"
 )
 
 var ErrInvalidSchema = errors.New("invalid schema")
+
+func ReadSchema(reader io.Reader) (schema Schema, err error) {
+	var data json.RawMessage
+	err = json.NewDecoder(reader).Decode(&data)
+	if err != nil {
+		return
+	}
+	schema, err = ParseSchema(data)
+	if err != nil {
+		return
+	}
+	return
+}
 
 func ParseSchema(data []byte) (schema Schema, err error) {
 	switch data[0] {
