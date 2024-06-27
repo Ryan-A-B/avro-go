@@ -29,12 +29,14 @@ func TestEncode(t *testing.T) {
 				})
 			})
 			Convey("int", func() {
-				schema := avroschema.AvroTypeInt
-				var buffer bytes.Buffer
-				encoder := avro.NewEncoder(&buffer, schema)
-				err := encoder.Encode(int32(42))
-				So(err, ShouldBeNil)
-				So(buffer.Bytes(), ShouldResemble, []byte{0x54})
+				Convey("value", func() {
+					schema := avroschema.AvroTypeInt
+					var buffer bytes.Buffer
+					encoder := avro.NewEncoder(&buffer, schema)
+					err := encoder.Encode(int32(42))
+					So(err, ShouldBeNil)
+					So(buffer.Bytes(), ShouldResemble, []byte{0x54})
+				})
 			})
 			Convey("long", func() {
 				schema := avroschema.AvroTypeLong
@@ -356,5 +358,109 @@ func BenchmarkEncodeUnion(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		encoder.Encode(options[i%3])
+	}
+}
+
+func BenchmarkEncodeRecordArray(b *testing.B) {
+	schema := &avroschema.Array{
+		SchemaBase: avroschema.SchemaBase{
+			Type: avroschema.AvroTypeArray,
+		},
+		Items: &avroschema.Record{
+			SchemaBase: avroschema.SchemaBase{
+				Type: avroschema.AvroTypeRecord,
+			},
+			NamedType: avroschema.NamedType{
+				Name: "SimpleRecord",
+			},
+			Fields: []*avroschema.RecordField{
+				{
+					Name: "name",
+					Type: avroschema.AvroTypeString,
+				},
+				{
+					Name: "age",
+					Type: avroschema.AvroTypeInt,
+				},
+			},
+		},
+	}
+	var buffer bytes.Buffer
+	encoder := avro.NewEncoder(&buffer, schema)
+	type SimpleRecord struct {
+		Name string `avro:"name"`
+		Age  int32  `avro:"age"`
+	}
+	value := []SimpleRecord{
+		{
+			Name: "foo",
+			Age:  42,
+		},
+		{
+			Name: "bar",
+			Age:  43,
+		},
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		encoder.Encode(value)
+	}
+}
+
+func BenchmarkEncodeEnumArray(b *testing.B) {
+	schema := &avroschema.Array{
+		SchemaBase: avroschema.SchemaBase{
+			Type: avroschema.AvroTypeArray,
+		},
+		Items: &avroschema.Enum{
+			SchemaBase: avroschema.SchemaBase{
+				Type: avroschema.AvroTypeEnum,
+			},
+			NamedType: avroschema.NamedType{
+				Name: "SimpleEnum",
+			},
+			Symbols: []string{"A", "B", "C"},
+		},
+	}
+	var buffer bytes.Buffer
+	encoder := avro.NewEncoder(&buffer, schema)
+	options := [][]string{
+		{"A", "B", "C"},
+		{"C", "A", "B"},
+		{"B", "C", "A"},
+		{"A", "C", "B"},
+		{"C", "B", "A"},
+		{"B", "A", "C"},
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		encoder.Encode(options[i%6])
+	}
+}
+
+func BenchmarkEncodeFixedArray(b *testing.B) {
+	schema := &avroschema.Array{
+		SchemaBase: avroschema.SchemaBase{
+			Type: avroschema.AvroTypeArray,
+		},
+		Items: &avroschema.Fixed{
+			SchemaBase: avroschema.SchemaBase{
+				Type: avroschema.AvroTypeFixed,
+			},
+			NamedType: avroschema.NamedType{
+				Name: "SimpleFixed",
+			},
+			Size: 3,
+		},
+	}
+	var buffer bytes.Buffer
+	encoder := avro.NewEncoder(&buffer, schema)
+	value := [][]byte{
+		{0x66, 0x6f, 0x6f},
+		{0x62, 0x61, 0x72},
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		encoder.Encode(value)
 	}
 }

@@ -5,7 +5,12 @@ import (
 	"io"
 )
 
-func WriteBoolean(writer io.Writer, value bool) (err error) {
+func WriteNull(writer io.Writer, v interface{}) (err error) {
+	return
+}
+
+func WriteBoolean(writer io.Writer, v interface{}) (err error) {
+	value := v.(bool)
 	encoded := byte(0)
 	if value {
 		encoded = 1
@@ -17,7 +22,8 @@ func WriteBoolean(writer io.Writer, value bool) (err error) {
 	return
 }
 
-func WriteInt(writer io.Writer, value int32) (err error) {
+func WriteInt(writer io.Writer, v interface{}) (err error) {
+	value := v.(int32)
 	encodedValue := make([]byte, binary.MaxVarintLen32)
 	n := binary.PutVarint(encodedValue, int64(value))
 	_, err = writer.Write(encodedValue[:n])
@@ -27,7 +33,8 @@ func WriteInt(writer io.Writer, value int32) (err error) {
 	return
 }
 
-func WriteLong(writer io.Writer, value int64) (err error) {
+func WriteLong(writer io.Writer, v interface{}) (err error) {
+	value := v.(int64)
 	encodedValue := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutVarint(encodedValue, value)
 	_, err = writer.Write(encodedValue[:n])
@@ -37,7 +44,8 @@ func WriteLong(writer io.Writer, value int64) (err error) {
 	return
 }
 
-func WriteBytes(writer io.Writer, value []byte) (err error) {
+func WriteBytes(writer io.Writer, v interface{}) (err error) {
+	value := v.([]byte)
 	err = WriteLong(writer, int64(len(value)))
 	if err != nil {
 		return
@@ -49,7 +57,8 @@ func WriteBytes(writer io.Writer, value []byte) (err error) {
 	return
 }
 
-func WriteString(writer io.Writer, value string) (err error) {
+func WriteString(writer io.Writer, v interface{}) (err error) {
+	value := v.(string)
 	err = WriteBytes(writer, []byte(value))
 	return
 }

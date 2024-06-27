@@ -1,7 +1,6 @@
 package avro
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -11,277 +10,302 @@ import (
 
 type Encoder struct {
 	writer io.Writer
-	schema avroschema.Schema
+	encode EncodeFunc
 }
+
+type EncodeFunc func(writer io.Writer, v interface{}) error
 
 func NewEncoder(writer io.Writer, schema avroschema.Schema) *Encoder {
 	return &Encoder{
 		writer: writer,
-		schema: schema,
+		encode: getEncodeFuncForSchema(schema),
 	}
 }
 
 func (encoder *Encoder) Encode(v interface{}) (err error) {
-	switch encoder.schema.GetType() {
+	return encoder.encode(encoder.writer, v)
+}
+
+func getEncodeFuncForSchema(schema avroschema.Schema) EncodeFunc {
+	switch schema.GetType() {
 	case avroschema.AvroTypeNull:
-		return
+		return WriteNull
 	case avroschema.AvroTypeBoolean:
-		return WriteBoolean(encoder.writer, v.(bool))
+		return WriteBoolean
 	case avroschema.AvroTypeInt:
-		return WriteInt(encoder.writer, v.(int32))
+		return WriteInt
 	case avroschema.AvroTypeLong:
-		return WriteLong(encoder.writer, v.(int64))
+		return WriteLong
 	case avroschema.AvroTypeFloat:
-		return errors.New("float not implemented")
+		panic("float not implemented")
 	case avroschema.AvroTypeDouble:
-		return errors.New("double not implemented")
+		panic("double not implemented")
 	case avroschema.AvroTypeBytes:
-		return WriteBytes(encoder.writer, v.([]byte))
+		return WriteBytes
 	case avroschema.AvroTypeString:
-		return WriteString(encoder.writer, v.(string))
+		return WriteString
 	case avroschema.AvroTypeRecord:
-		return encoder.writeRecord(v)
+		avroRecord := schema.(*avroschema.Record)
+		return getEncodeFuncForRecord(avroRecord)
 	case avroschema.AvroTypeEnum:
-		return encoder.writeEnum(v.(string))
+		avroEnum := schema.(*avroschema.Enum)
+		return getEncodeFuncForEnum(avroEnum)
 	case avroschema.AvroTypeArray:
-		return encoder.writeArray(v)
+		avroArray := schema.(*avroschema.Array)
+		return getEncodeFuncForArray(avroArray)
 	case avroschema.AvroTypeMap:
-		return encoder.writeMap(v)
+		avroMap := schema.(*avroschema.Map)
+		return getEncodeFuncForMap(avroMap)
 	case avroschema.AvroTypeFixed:
-		return encoder.writeFixed(v.([]byte))
+		avroFixed := schema.(*avroschema.Fixed)
+		return getEncodeFuncForFixed(avroFixed)
 	case avroschema.AvroTypeUnion:
-		return encoder.writeUnion(v)
+		avroUnion := schema.(avroschema.Union)
+		return getEncodeFuncForUnion(avroUnion)
 	default:
-		return fmt.Errorf("type %s not implemented", encoder.schema.GetType())
+		panic(fmt.Sprintf("type %s not implemented", schema.GetType()))
 	}
 }
 
-func (encoder *Encoder) writeRecord(v interface{}) (err error) {
-	val := reflect.ValueOf(v)
-	if val.Kind() != reflect.Struct {
-		return fmt.Errorf("expected a struct, got %T", v)
+func getEncodeFuncForRecord(avroRecord *avroschema.Record) EncodeFunc {
+	type frame struct {
+		name   string
+		encode EncodeFunc
 	}
-	typ := reflect.TypeOf(v)
-	record := encoder.schema.(*avroschema.Record)
-	for _, recordField := range record.Fields {
-		found := false
+	frames := make([]frame, 0, len(avroRecord.Fields))
+	for _, field := range avroRecord.Fields {
+		frames = append(frames, frame{
+			name:   field.Name,
+			encode: getEncodeFuncForSchema(field.Type),
+		})
+	}
+	return func(writer io.Writer, v interface{}) (err error) {
+		val := reflect.ValueOf(v)
+		if val.Kind() != reflect.Struct {
+			panic(fmt.Errorf("expected a struct, got %T", v))
+		}
+		values := make(map[string]interface{})
+		typ := reflect.TypeOf(v)
 		for i := 0; i < typ.NumField(); i++ {
 			field := typ.Field(i)
 			tag := field.Tag.Get("avro")
 			if tag == "" {
 				continue
 			}
-			if tag != recordField.Name {
-				continue
+			values[tag] = val.Field(i).Interface()
+		}
+		for _, frame := range frames {
+			value, ok := values[frame.name]
+			if !ok {
+				return fmt.Errorf("field %s not found", frame.name)
 			}
-			found = true
-			switch recordField.Type.GetType() {
-			case avroschema.AvroTypeBoolean:
-				err = WriteBoolean(encoder.writer, val.Field(i).Bool())
-			case avroschema.AvroTypeInt:
-				err = WriteInt(encoder.writer, int32(val.Field(i).Int()))
-			case avroschema.AvroTypeLong:
-				err = WriteLong(encoder.writer, val.Field(i).Int())
-			case avroschema.AvroTypeFloat:
-				err = errors.New("float not implemented")
-			case avroschema.AvroTypeDouble:
-				err = errors.New("double not implemented")
-			case avroschema.AvroTypeBytes:
-				err = WriteBytes(encoder.writer, val.Field(i).Bytes())
-			case avroschema.AvroTypeString:
-				err = WriteString(encoder.writer, val.Field(i).String())
-			case avroschema.AvroTypeRecord:
-				err = encoder.writeRecord(val.Field(i).Interface())
-			default:
-				err = fmt.Errorf("type %s not implemented", recordField.Type.GetType())
-			}
+			err = frame.encode(writer, value)
 			if err != nil {
 				return
 			}
 		}
-		if !found {
-			return fmt.Errorf("field %s not found", recordField.Name)
-		}
+		return nil
 	}
-	return
 }
 
-func (encoder *Encoder) writeEnum(value string) (err error) {
-	enum := encoder.schema.(*avroschema.Enum)
-	for i, symbol := range enum.Symbols {
-		if symbol != value {
-			continue
+func getEncodeFuncForEnum(avroEnum *avroschema.Enum) EncodeFunc {
+	index := make(map[string]int)
+	for i, symbol := range avroEnum.Symbols {
+		index[symbol] = i
+	}
+	return func(writer io.Writer, v interface{}) (err error) {
+		value := v.(string)
+		i, ok := index[value]
+		if !ok {
+			return fmt.Errorf("symbol %s not found", value)
 		}
-		err = WriteInt(encoder.writer, int32(i))
+		return WriteInt(writer, int32(i))
+	}
+}
+
+func getEncodeFuncForArray(avroArray *avroschema.Array) EncodeFunc {
+	encode, ok := encodeArrayByType[avroArray.Items.GetType()]
+	if ok {
+		return encode
+	}
+	switch avroArray.Items.GetType() {
+	case avroschema.AvroTypeEnum:
+		avroEnum := avroArray.Items.(*avroschema.Enum)
+		return getEncodeFuncForEnumArray(avroEnum)
+	case avroschema.AvroTypeFixed:
+		avroFixed := avroArray.Items.(*avroschema.Fixed)
+		return getEncodeFuncForFixedArray(avroFixed)
+	}
+	encode = getEncodeFuncForSchema(avroArray.Items)
+	return func(writer io.Writer, v interface{}) (err error) {
+		val := reflect.ValueOf(v)
+		if val.Kind() != reflect.Slice {
+			panic(fmt.Errorf("expected a slice, got %T", v))
+		}
+		err = WriteLong(writer, int64(val.Len()))
+		if err != nil {
+			return
+		}
+		for i := 0; i < val.Len(); i++ {
+			err = encode(writer, val.Index(i).Interface())
+			if err != nil {
+				return
+			}
+		}
+		_, err = writer.Write([]byte{0})
 		if err != nil {
 			return
 		}
 		return
 	}
-	err = fmt.Errorf("symbol %s not found", value)
-	return
 }
 
-func (encoder *Encoder) writeArray(v interface{}) (err error) {
-	avroArray := encoder.schema.(*avroschema.Array)
-	val := reflect.ValueOf(v)
-	if val.Kind() != reflect.Slice {
-		return fmt.Errorf("expected a slice, got %T", v)
-	}
-	err = WriteLong(encoder.writer, int64(val.Len()))
-	if err != nil {
-		return
-	}
-	for i := 0; i < val.Len(); i++ {
-		switch avroArray.Items.GetType() {
-		case avroschema.AvroTypeBoolean:
-			err = WriteBoolean(encoder.writer, val.Index(i).Bool())
-		case avroschema.AvroTypeInt:
-			err = WriteInt(encoder.writer, int32(val.Index(i).Int()))
-		case avroschema.AvroTypeLong:
-			err = WriteLong(encoder.writer, val.Index(i).Int())
-		case avroschema.AvroTypeFloat:
-			err = errors.New("float not implemented")
-		case avroschema.AvroTypeDouble:
-			err = errors.New("double not implemented")
-		case avroschema.AvroTypeBytes:
-			err = WriteBytes(encoder.writer, val.Index(i).Bytes())
-		case avroschema.AvroTypeString:
-			err = WriteString(encoder.writer, val.Index(i).String())
-		case avroschema.AvroTypeRecord:
-			err = errors.New("record not implemented")
-		case avroschema.AvroTypeEnum:
-			err = errors.New("enum not implemented")
-		default:
-			err = fmt.Errorf("type %s not implemented", avroArray.Items.GetType())
-		}
+func getEncodeFuncForEnumArray(avroEnum *avroschema.Enum) EncodeFunc {
+	encode := getEncodeFuncForEnum(avroEnum)
+	return func(writer io.Writer, v interface{}) (err error) {
+		value := v.([]string)
+		err = WriteLong(writer, int64(len(value)))
 		if err != nil {
 			return
 		}
-	}
-	_, err = encoder.writer.Write([]byte{0})
-	if err != nil {
-		return
-	}
-	return
-}
-
-func (encoder *Encoder) writeMap(v interface{}) (err error) {
-	avroMap := encoder.schema.(*avroschema.Map)
-	val := reflect.ValueOf(v)
-	if val.Kind() != reflect.Map {
-		return fmt.Errorf("expected a map, got %T", v)
-	}
-	err = WriteLong(encoder.writer, int64(val.Len()))
-	if err != nil {
-		return
-	}
-	for _, keyVal := range val.MapKeys() {
-		key := keyVal.String()
-		err = WriteString(encoder.writer, key)
+		for _, symbol := range value {
+			err = encode(writer, symbol)
+			if err != nil {
+				return
+			}
+		}
+		_, err = writer.Write([]byte{0})
 		if err != nil {
 			return
 		}
-		switch avroMap.Values.GetType() {
-		case avroschema.AvroTypeBoolean:
-			err = WriteBoolean(encoder.writer, val.MapIndex(keyVal).Bool())
-		case avroschema.AvroTypeInt:
-			err = WriteInt(encoder.writer, int32(val.MapIndex(keyVal).Int()))
-		case avroschema.AvroTypeLong:
-			err = WriteLong(encoder.writer, val.MapIndex(keyVal).Int())
-		case avroschema.AvroTypeFloat:
-			err = errors.New("float not implemented")
-		case avroschema.AvroTypeDouble:
-			err = errors.New("double not implemented")
-		case avroschema.AvroTypeBytes:
-			err = WriteBytes(encoder.writer, val.MapIndex(keyVal).Bytes())
-		case avroschema.AvroTypeString:
-			err = WriteString(encoder.writer, val.MapIndex(keyVal).String())
-		case avroschema.AvroTypeRecord:
-			err = errors.New("record not implemented")
-		case avroschema.AvroTypeEnum:
-			err = errors.New("enum not implemented")
-		default:
-			err = fmt.Errorf("type %s not implemented", avroMap.Values.GetType())
-		}
+		return
+	}
+}
+
+func getEncodeFuncForFixedArray(avroFixed *avroschema.Fixed) EncodeFunc {
+	encode := getEncodeFuncForFixed(avroFixed)
+	return func(writer io.Writer, v interface{}) (err error) {
+		value := v.([][]byte)
+		err = WriteLong(writer, int64(len(value)))
 		if err != nil {
 			return
 		}
-	}
-	_, err = encoder.writer.Write([]byte{0})
-	if err != nil {
-		return
-	}
-	return
-}
-
-func (encoder *Encoder) writeFixed(value []byte) (err error) {
-	fixed := encoder.schema.(*avroschema.Fixed)
-	if len(value) != fixed.Size {
-		return fmt.Errorf("expected %d bytes, got %d", fixed.Size, len(value))
-	}
-	_, err = encoder.writer.Write(value)
-	if err != nil {
-		return
-	}
-	return
-}
-
-func (encoder *Encoder) writeUnion(v interface{}) (err error) {
-	union := encoder.schema.(avroschema.Union)
-	for i, schema := range union {
-		switch schema.GetType() {
-		case avroschema.AvroTypeNull:
-			if v == nil {
-				return WriteInt(encoder.writer, int32(i))
+		for _, bytes := range value {
+			err = encode(writer, bytes)
+			if err != nil {
+				return
 			}
-		case avroschema.AvroTypeBoolean:
-			if value, ok := v.(bool); ok {
-				err = WriteInt(encoder.writer, int32(i))
-				if err != nil {
-					return
-				}
-				return WriteBoolean(encoder.writer, value)
-			}
-		case avroschema.AvroTypeInt:
-			if value, ok := v.(int32); ok {
-				err = WriteInt(encoder.writer, int32(i))
-				if err != nil {
-					return
-				}
-				return WriteInt(encoder.writer, value)
-			}
-		case avroschema.AvroTypeLong:
-			if value, ok := v.(int64); ok {
-				err = WriteInt(encoder.writer, int32(i))
-				if err != nil {
-					return
-				}
-				return WriteLong(encoder.writer, value)
-			}
-		case avroschema.AvroTypeFloat:
-			return errors.New("float not implemented")
-		case avroschema.AvroTypeDouble:
-			return errors.New("double not implemented")
-		case avroschema.AvroTypeBytes:
-			if value, ok := v.([]byte); ok {
-				err = WriteInt(encoder.writer, int32(i))
-				if err != nil {
-					return
-				}
-				return WriteBytes(encoder.writer, value)
-			}
-		case avroschema.AvroTypeString:
-			if value, ok := v.(string); ok {
-				err = WriteInt(encoder.writer, int32(i))
-				if err != nil {
-					return
-				}
-				return WriteString(encoder.writer, value)
-			}
-		default:
-			return fmt.Errorf("type %s not implemented", schema.GetType())
 		}
+		_, err = writer.Write([]byte{0})
+		if err != nil {
+			return
+		}
+		return
 	}
-	return
+}
+
+func getEncodeFuncForMap(avroMap *avroschema.Map) EncodeFunc {
+	encode, ok := encodeMapByType[avroMap.Values.GetType()]
+	if ok {
+		return encode
+	}
+	encode = getEncodeFuncForSchema(avroMap.Values)
+	return func(writer io.Writer, v interface{}) (err error) {
+		val := reflect.ValueOf(v)
+		if val.Kind() != reflect.Map {
+			panic(fmt.Errorf("expected a map, got %T", v))
+		}
+		err = WriteLong(writer, int64(val.Len()))
+		if err != nil {
+			return
+		}
+		for _, keyVal := range val.MapKeys() {
+			key := keyVal.String()
+			err = WriteString(writer, key)
+			if err != nil {
+				return
+			}
+			err = encode(writer, val.MapIndex(keyVal).Interface())
+			if err != nil {
+				return
+			}
+		}
+		_, err = writer.Write([]byte{0})
+		if err != nil {
+			return
+		}
+		return
+	}
+}
+
+func getEncodeFuncForFixed(avroFixed *avroschema.Fixed) EncodeFunc {
+	size := avroFixed.Size
+	return func(writer io.Writer, v interface{}) (err error) {
+		value := v.([]byte)
+		if len(value) != size {
+			return fmt.Errorf("expected %d bytes, got %d", size, len(value))
+		}
+		_, err = writer.Write(value)
+		if err != nil {
+			return
+		}
+		return
+	}
+}
+
+func getEncodeFuncForUnion(avroUnion avroschema.Union) EncodeFunc {
+	indices := make(map[reflect.Type]int)
+	encodeFuncs := make([]EncodeFunc, len(avroUnion))
+	for i, schema := range avroUnion {
+		indices[getGoTypeForSchema(schema)] = i
+		encodeFuncs[i] = getEncodeFuncForSchema(schema)
+	}
+	return func(writer io.Writer, v interface{}) (err error) {
+		typ := reflect.TypeOf(v)
+		index, ok := indices[typ]
+		if !ok {
+			panic(fmt.Errorf("type %s not supported", typ))
+		}
+		err = WriteInt(writer, int32(index))
+		if err != nil {
+			return
+		}
+		encode := encodeFuncs[index]
+		return encode(writer, v)
+	}
+}
+
+func getGoTypeForSchema(schema avroschema.Schema) reflect.Type {
+	switch schema.GetType() {
+	case avroschema.AvroTypeNull:
+		return reflect.TypeOf(nil)
+	case avroschema.AvroTypeBoolean:
+		return reflect.TypeOf(false)
+	case avroschema.AvroTypeInt:
+		return reflect.TypeOf(int32(0))
+	case avroschema.AvroTypeLong:
+		return reflect.TypeOf(int64(0))
+	case avroschema.AvroTypeFloat:
+		return reflect.TypeOf(float32(0))
+	case avroschema.AvroTypeDouble:
+		return reflect.TypeOf(float64(0))
+	case avroschema.AvroTypeBytes:
+		return reflect.TypeOf([]byte{})
+	case avroschema.AvroTypeString:
+		return reflect.TypeOf("")
+	case avroschema.AvroTypeRecord:
+		panic("record not implemented")
+	case avroschema.AvroTypeEnum:
+		return reflect.TypeOf("")
+	case avroschema.AvroTypeArray:
+		panic("array not implemented")
+	case avroschema.AvroTypeMap:
+		panic("map not implemented")
+	case avroschema.AvroTypeFixed:
+		return reflect.TypeOf([]byte{})
+	case avroschema.AvroTypeUnion:
+		panic("union not implemented")
+	default:
+		panic(fmt.Sprintf("type %s not implemented", schema.GetType()))
+	}
 }
