@@ -37,9 +37,9 @@ func getEncodeFuncForSchema(schema avroschema.Schema) EncodeFunc {
 	case avroschema.AvroTypeLong:
 		return WriteLong
 	case avroschema.AvroTypeFloat:
-		panic("float not implemented")
+		return WriteFloat
 	case avroschema.AvroTypeDouble:
-		panic("double not implemented")
+		return WriteDouble
 	case avroschema.AvroTypeBytes:
 		return WriteBytes
 	case avroschema.AvroTypeString:
@@ -304,7 +304,7 @@ func getGoTypeForSchema(schema avroschema.Schema) reflect.Type {
 	case avroschema.AvroTypeFixed:
 		return reflect.TypeOf([]byte{})
 	case avroschema.AvroTypeUnion:
-		panic("union not implemented")
+		panic("union of union not allowed")
 	default:
 		panic(fmt.Sprintf("type %s not implemented", schema.GetType()))
 	}

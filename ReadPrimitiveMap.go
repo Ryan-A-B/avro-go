@@ -92,6 +92,66 @@ func ReadLongMap(reader Reader, v interface{}) (err error) {
 	return
 }
 
+func ReadFloatMap(reader Reader, v interface{}) (err error) {
+	value := v.(*map[string]float32)
+	blockLength, err := binary.ReadVarint(reader)
+	if err != nil {
+		return
+	}
+	values := make(map[string]float32, blockLength)
+	for blockLength != 0 {
+		for i := int64(0); i < blockLength; i++ {
+			var key string
+			err = ReadString(reader, &key)
+			if err != nil {
+				return
+			}
+			var value float32
+			err = ReadFloat(reader, &value)
+			if err != nil {
+				return
+			}
+			values[key] = value
+		}
+		blockLength, err = binary.ReadVarint(reader)
+		if err != nil {
+			return
+		}
+	}
+	*value = values
+	return
+}
+
+func ReadDoubleMap(reader Reader, v interface{}) (err error) {
+	value := v.(*map[string]float64)
+	blockLength, err := binary.ReadVarint(reader)
+	if err != nil {
+		return
+	}
+	values := make(map[string]float64, blockLength)
+	for blockLength != 0 {
+		for i := int64(0); i < blockLength; i++ {
+			var key string
+			err = ReadString(reader, &key)
+			if err != nil {
+				return
+			}
+			var value float64
+			err = ReadDouble(reader, &value)
+			if err != nil {
+				return
+			}
+			values[key] = value
+		}
+		blockLength, err = binary.ReadVarint(reader)
+		if err != nil {
+			return
+		}
+	}
+	*value = values
+	return
+}
+
 func ReadBytesMap(reader Reader, v interface{}) (err error) {
 	value := v.(*map[string][]byte)
 	blockLength, err := binary.ReadVarint(reader)

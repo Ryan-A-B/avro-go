@@ -41,9 +41,9 @@ func getDecodeFuncForSchema(schema avroschema.Schema) decodeFunc {
 	case avroschema.AvroTypeLong:
 		return ReadLong
 	case avroschema.AvroTypeFloat:
-		panic("float not implemented")
+		return ReadFloat
 	case avroschema.AvroTypeDouble:
-		panic("double not implemented")
+		return ReadDouble
 	case avroschema.AvroTypeBytes:
 		return ReadBytes
 	case avroschema.AvroTypeString:
@@ -135,9 +135,9 @@ func getDecodeFuncForArray(avroArray *avroschema.Array) decodeFunc {
 	case avroschema.AvroTypeLong:
 		return ReadLongArray
 	case avroschema.AvroTypeFloat:
-		panic("float not implemented")
+		return ReadFloatArray
 	case avroschema.AvroTypeDouble:
-		panic("double not implemented")
+		return ReadDoubleArray
 	case avroschema.AvroTypeBytes:
 		return ReadBytesArray
 	case avroschema.AvroTypeString:
@@ -206,9 +206,9 @@ func getDecodeFuncForMap(avroMap *avroschema.Map) decodeFunc {
 	case avroschema.AvroTypeLong:
 		return ReadLongMap
 	case avroschema.AvroTypeFloat:
-		panic("float not implemented")
+		return ReadFloatMap
 	case avroschema.AvroTypeDouble:
-		panic("double not implemented")
+		return ReadDoubleMap
 	case avroschema.AvroTypeBytes:
 		return ReadBytesMap
 	case avroschema.AvroTypeString:
@@ -301,6 +301,9 @@ func getDecodeFuncForFixed(avroFixed *avroschema.Fixed) decodeFunc {
 }
 
 func getDecodeFuncForUnion(avroUnion avroschema.Union) decodeFunc {
+	if isOptional(avroUnion) {
+		return getDecodeFuncForOptional(avroUnion)
+	}
 	decodeFuncs := make([]decodeFunc, 0, len(avroUnion))
 	for _, schema := range avroUnion {
 		var decode decodeFunc
@@ -314,9 +317,9 @@ func getDecodeFuncForUnion(avroUnion avroschema.Union) decodeFunc {
 		case avroschema.AvroTypeLong:
 			decode = ReadUnionLong
 		case avroschema.AvroTypeFloat:
-			panic("float not implemented")
+			decode = ReadUnionFloat
 		case avroschema.AvroTypeDouble:
-			panic("double not implemented")
+			decode = ReadUnionDouble
 		case avroschema.AvroTypeBytes:
 			decode = ReadUnionBytes
 		case avroschema.AvroTypeString:
@@ -356,6 +359,54 @@ func getDecodeFuncForUnion(avroUnion avroschema.Union) decodeFunc {
 	}
 }
 
+func isOptional(avroUnion avroschema.Union) bool {
+	if len(avroUnion) != 2 {
+		return false
+	}
+	if avroUnion[0].GetType() == avroschema.AvroTypeNull {
+		return true
+	}
+	if avroUnion[1].GetType() == avroschema.AvroTypeNull {
+		return true
+	}
+	return false
+}
+
+func getDecodeFuncForOptional(avroUnion avroschema.Union) decodeFunc {
+	var decode decodeFunc
+	indexOfNull := int64(0)
+	for i, schema := range avroUnion {
+		switch schema.GetType() {
+		case avroschema.AvroTypeNull:
+			indexOfNull = int64(i)
+		default:
+			decode = getDecodeFuncForSchema(schema)
+		}
+	}
+	return func(reader Reader, v interface{}) (err error) {
+		index, err := binary.ReadVarint(reader)
+		if err != nil {
+			return
+		}
+		if index == indexOfNull {
+			ReadUnionNull(reader, v)
+			return
+		}
+		val := reflect.ValueOf(v)
+		if val.Kind() != reflect.Ptr {
+			panic(fmt.Errorf("pointer expected, got %s", val.Kind()))
+		}
+		val = val.Elem()
+		if val.Kind() != reflect.Ptr {
+			return decode(reader, v)
+		}
+		if val.IsNil() {
+			val.Set(reflect.New(val.Type().Elem()))
+		}
+		return decode(reader, val.Interface())
+	}
+}
+
 func getDecodeFuncForUnionArray(avroArray *avroschema.Array) decodeFunc {
 	switch avroArray.Items.GetType() {
 	case avroschema.AvroTypeBoolean:
@@ -365,9 +416,9 @@ func getDecodeFuncForUnionArray(avroArray *avroschema.Array) decodeFunc {
 	case avroschema.AvroTypeLong:
 		return ReadUnionLongArray
 	case avroschema.AvroTypeFloat:
-		panic("float not implemented")
+		return ReadUnionFloatArray
 	case avroschema.AvroTypeDouble:
-		panic("double not implemented")
+		return ReadUnionDoubleArray
 	case avroschema.AvroTypeBytes:
 		return ReadUnionBytesArray
 	case avroschema.AvroTypeString:
@@ -398,9 +449,9 @@ func getDecodeFuncForUnionMap(avroMap *avroschema.Map) decodeFunc {
 	case avroschema.AvroTypeLong:
 		return ReadUnionLongMap
 	case avroschema.AvroTypeFloat:
-		panic("float not implemented")
+		return ReadUnionFloatMap
 	case avroschema.AvroTypeDouble:
-		panic("double not implemented")
+		return ReadUnionDoubleMap
 	case avroschema.AvroTypeBytes:
 		return ReadUnionBytesMap
 	case avroschema.AvroTypeString:

@@ -36,6 +36,16 @@ func ReadLong(reader Reader, v interface{}) (err error) {
 	return
 }
 
+func ReadFloat(reader Reader, v interface{}) (err error) {
+	value := v.(*float32)
+	return binary.Read(reader, binary.LittleEndian, value)
+}
+
+func ReadDouble(reader Reader, v interface{}) (err error) {
+	value := v.(*float64)
+	return binary.Read(reader, binary.LittleEndian, value)
+}
+
 func ReadBytes(reader Reader, v interface{}) (err error) {
 	value := v.(*[]byte)
 	length, err := binary.ReadVarint(reader)

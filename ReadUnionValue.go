@@ -20,30 +20,30 @@ var (
 	ReadUnionBoolean = makeReadUnionValue(reflect.TypeOf(false), ReadBoolean)
 	ReadUnionInt     = makeReadUnionValue(reflect.TypeOf(int32(0)), ReadInt)
 	ReadUnionLong    = makeReadUnionValue(reflect.TypeOf(int64(0)), ReadLong)
-	// float
-	// double
-	ReadUnionBytes  = makeReadUnionValue(reflect.TypeOf([]byte(nil)), ReadBytes)
-	ReadUnionString = makeReadUnionValue(reflect.TypeOf(""), ReadString)
+	ReadUnionFloat   = makeReadUnionValue(reflect.TypeOf(float32(0)), ReadFloat)
+	ReadUnionDouble  = makeReadUnionValue(reflect.TypeOf(float64(0)), ReadDouble)
+	ReadUnionBytes   = makeReadUnionValue(reflect.TypeOf([]byte(nil)), ReadBytes)
+	ReadUnionString  = makeReadUnionValue(reflect.TypeOf(""), ReadString)
 )
 
 var (
 	ReadUnionBooleanArray = makeReadUnionValue(reflect.TypeOf([]bool(nil)), ReadBooleanArray)
 	ReadUnionIntArray     = makeReadUnionValue(reflect.TypeOf([]int32(nil)), ReadIntArray)
 	ReadUnionLongArray    = makeReadUnionValue(reflect.TypeOf([]int64(nil)), ReadLongArray)
-	// float
-	// double
-	ReadUnionBytesArray  = makeReadUnionValue(reflect.TypeOf([][]byte(nil)), ReadBytesArray)
-	ReadUnionStringArray = makeReadUnionValue(reflect.TypeOf([]string(nil)), ReadStringArray)
+	ReadUnionFloatArray   = makeReadUnionValue(reflect.TypeOf([]float32(nil)), ReadFloatArray)
+	ReadUnionDoubleArray  = makeReadUnionValue(reflect.TypeOf([]float64(nil)), ReadDoubleArray)
+	ReadUnionBytesArray   = makeReadUnionValue(reflect.TypeOf([][]byte(nil)), ReadBytesArray)
+	ReadUnionStringArray  = makeReadUnionValue(reflect.TypeOf([]string(nil)), ReadStringArray)
 )
 
 var (
 	ReadUnionBooleanMap = makeReadUnionValue(reflect.TypeOf(map[string]bool(nil)), ReadBooleanMap)
 	ReadUnionIntMap     = makeReadUnionValue(reflect.TypeOf(map[string]int32(nil)), ReadIntMap)
 	ReadUnionLongMap    = makeReadUnionValue(reflect.TypeOf(map[string]int64(nil)), ReadLongMap)
-	// float
-	// double
-	ReadUnionBytesMap  = makeReadUnionValue(reflect.TypeOf(map[string][]byte(nil)), ReadBytesMap)
-	ReadUnionStringMap = makeReadUnionValue(reflect.TypeOf(map[string]string(nil)), ReadStringMap)
+	ReadUnionFloatMap   = makeReadUnionValue(reflect.TypeOf(map[string]float32(nil)), ReadFloatMap)
+	ReadUnionDoubleMap  = makeReadUnionValue(reflect.TypeOf(map[string]float64(nil)), ReadDoubleMap)
+	ReadUnionBytesMap   = makeReadUnionValue(reflect.TypeOf(map[string][]byte(nil)), ReadBytesMap)
+	ReadUnionStringMap  = makeReadUnionValue(reflect.TypeOf(map[string]string(nil)), ReadStringMap)
 )
 
 func makeReadUnionValue(t reflect.Type, decode decodeFunc) decodeFunc {

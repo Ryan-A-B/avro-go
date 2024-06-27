@@ -44,6 +44,16 @@ func WriteLong(writer io.Writer, v interface{}) (err error) {
 	return
 }
 
+func WriteFloat(writer io.Writer, v interface{}) (err error) {
+	value := v.(float32)
+	return binary.Write(writer, binary.LittleEndian, value)
+}
+
+func WriteDouble(writer io.Writer, v interface{}) (err error) {
+	value := v.(float64)
+	return binary.Write(writer, binary.LittleEndian, value)
+}
+
 func WriteBytes(writer io.Writer, v interface{}) (err error) {
 	value := v.([]byte)
 	err = WriteLong(writer, int64(len(value)))

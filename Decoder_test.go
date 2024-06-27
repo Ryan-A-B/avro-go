@@ -654,6 +654,285 @@ func TestDecoder(t *testing.T) {
 						So(value, ShouldResemble, expectedValue)
 					})
 				})
+				Convey("Optional", func() {
+					Convey("int", func() {
+						schema := avroschema.Union{
+							avroschema.AvroTypeNull,
+							avroschema.AvroTypeInt,
+						}
+						Convey("null", func() {
+							data := []byte{0x00}
+							value := new(int32)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value, ShouldResemble, new(int32))
+						})
+						Convey("int", func() {
+							data := []byte{0x02, 0x54}
+							value := new(int32)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value, ShouldNotBeNil)
+							So(*value, ShouldEqual, 42)
+						})
+					})
+					Convey("record", func() {
+						schema := avroschema.Union{
+							avroschema.AvroTypeNull,
+							&avroschema.Record{
+								SchemaBase: avroschema.SchemaBase{
+									Type: avroschema.AvroTypeRecord,
+								},
+								NamedType: avroschema.NamedType{
+									Name: "SimpleRecord",
+								},
+								Fields: []*avroschema.RecordField{
+									{
+										Name: "name",
+										Type: avroschema.AvroTypeString,
+									},
+									{
+										Name: "age",
+										Type: avroschema.AvroTypeInt,
+									},
+								},
+							},
+						}
+						type Person struct {
+							Name string `avro:"name"`
+							Age  int32  `avro:"age"`
+						}
+						Convey("null", func() {
+							data := []byte{0x00}
+							value := new(Person)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value, ShouldResemble, new(Person))
+						})
+						Convey("record", func() {
+							data := []byte{0x02, 0x06, 0x66, 0x6f, 0x6f, 0x54}
+							value := new(Person)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value.Name, ShouldEqual, "foo")
+							So(value.Age, ShouldEqual, 42)
+						})
+					})
+					Convey("int inside record", func() {
+						type Person struct {
+							Name string `avro:"name"`
+							Age  *int32 `avro:"age"`
+						}
+						schema := &avroschema.Record{
+							SchemaBase: avroschema.SchemaBase{
+								Type: avroschema.AvroTypeRecord,
+							},
+							NamedType: avroschema.NamedType{
+								Name: "Person",
+							},
+							Fields: []*avroschema.RecordField{
+								{
+									Name: "name",
+									Type: avroschema.AvroTypeString,
+								},
+								{
+									Name: "age",
+									Type: avroschema.Union{
+										avroschema.AvroTypeNull,
+										avroschema.AvroTypeInt,
+									},
+								},
+							},
+						}
+						Convey("null", func() {
+							data := []byte{0x06, 0x66, 0x6f, 0x6f, 0x00}
+							value := new(Person)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value, ShouldResemble, &Person{
+								Name: "foo",
+							})
+						})
+						Convey("int", func() {
+							data := []byte{0x06, 0x66, 0x6f, 0x6f, 0x02, 0x54}
+							value := new(Person)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value.Name, ShouldEqual, "foo")
+							So(*value.Age, ShouldEqual, 42)
+						})
+					})
+					Convey("record inside record", func() {
+						type Info struct {
+							Name string `avro:"name"`
+							Age  int32  `avro:"age"`
+						}
+						type Person struct {
+							ID   string `avro:"id"`
+							Info *Info  `avro:"info"`
+						}
+						schema := &avroschema.Record{
+							SchemaBase: avroschema.SchemaBase{
+								Type: avroschema.AvroTypeRecord,
+							},
+							NamedType: avroschema.NamedType{
+								Name: "Person",
+							},
+							Fields: []*avroschema.RecordField{
+								{
+									Name: "id",
+									Type: avroschema.AvroTypeString,
+								},
+								{
+									Name: "info",
+									Type: avroschema.Union{
+										avroschema.AvroTypeNull,
+										&avroschema.Record{
+											SchemaBase: avroschema.SchemaBase{
+												Type: avroschema.AvroTypeRecord,
+											},
+											NamedType: avroschema.NamedType{
+												Name: "Info",
+											},
+											Fields: []*avroschema.RecordField{
+												{
+													Name: "name",
+													Type: avroschema.AvroTypeString,
+												},
+												{
+													Name: "age",
+													Type: avroschema.AvroTypeInt,
+												},
+											},
+										},
+									},
+								},
+							},
+						}
+						Convey("null", func() {
+							data := []byte{0x04, 0x69, 0x64, 0x00}
+							value := new(Person)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value, ShouldResemble, &Person{
+								ID: "id",
+							})
+						})
+						Convey("record", func() {
+							data := []byte{0x04, 0x69, 0x64, 0x02, 0x06, 0x66, 0x6f, 0x6f, 0x54}
+							value := new(Person)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value.ID, ShouldEqual, "id")
+							So(value.Info.Name, ShouldEqual, "foo")
+							So(value.Info.Age, ShouldEqual, 42)
+						})
+					})
+					Convey("array inside record", func() {
+						type Person struct {
+							ID    string    `avro:"id"`
+							Names *[]string `avro:"names"`
+						}
+						schema := &avroschema.Record{
+							SchemaBase: avroschema.SchemaBase{
+								Type: avroschema.AvroTypeRecord,
+							},
+							NamedType: avroschema.NamedType{
+								Name: "Person",
+							},
+							Fields: []*avroschema.RecordField{
+								{
+									Name: "id",
+									Type: avroschema.AvroTypeString,
+								},
+								{
+									Name: "names",
+									Type: avroschema.Union{
+										avroschema.AvroTypeNull,
+										&avroschema.Array{
+											SchemaBase: avroschema.SchemaBase{
+												Type: avroschema.AvroTypeArray,
+											},
+											Items: avroschema.AvroTypeString,
+										},
+									},
+								},
+							},
+						}
+						Convey("null", func() {
+							data := []byte{0x04, 0x69, 0x64, 0x00}
+							value := new(Person)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value, ShouldResemble, &Person{
+								ID: "id",
+							})
+						})
+						Convey("array", func() {
+							data := []byte{0x04, 0x69, 0x64, 0x02, 0x04, 0x06, 0x66, 0x6f, 0x6f, 0x06, 0x62, 0x61, 0x72, 0x00}
+							value := new(Person)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value.ID, ShouldEqual, "id")
+							So(*value.Names, ShouldResemble, []string{"foo", "bar"})
+						})
+					})
+					Convey("map inside record", func() {
+						type Person struct {
+							ID     string            `avro:"id"`
+							Values *map[string]int32 `avro:"values"`
+						}
+						schema := &avroschema.Record{
+							SchemaBase: avroschema.SchemaBase{
+								Type: avroschema.AvroTypeRecord,
+							},
+							NamedType: avroschema.NamedType{
+								Name: "Person",
+							},
+							Fields: []*avroschema.RecordField{
+								{
+									Name: "id",
+									Type: avroschema.AvroTypeString,
+								},
+								{
+									Name: "values",
+									Type: avroschema.Union{
+										avroschema.AvroTypeNull,
+										&avroschema.Map{
+											SchemaBase: avroschema.SchemaBase{
+												Type: avroschema.AvroTypeMap,
+											},
+											Values: avroschema.AvroTypeInt,
+										},
+									},
+								},
+							},
+						}
+						Convey("null", func() {
+							data := []byte{0x04, 0x69, 0x64, 0x00}
+							value := new(Person)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value, ShouldResemble, &Person{
+								ID: "id",
+							})
+						})
+						Convey("map", func() {
+							data := []byte{
+								0x04, 0x69, 0x64,
+								0x02,
+								0x04,
+								0x06, 0x66, 0x6f, 0x6f, 0x54,
+								0x06, 0x62, 0x61, 0x72, 0x56,
+								0x00}
+							value := new(Person)
+							err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(value)
+							So(err, ShouldBeNil)
+							So(value.ID, ShouldEqual, "id")
+							So(*value.Values, ShouldResemble, map[string]int32{"foo": 42, "bar": 43})
+						})
+					})
+				})
 			})
 		})
 	})
