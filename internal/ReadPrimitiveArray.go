@@ -1,27 +1,22 @@
-package avro
+package internal
 
 import "encoding/binary"
 
-func ReadBooleanMap(reader Reader, v interface{}) (err error) {
-	value := v.(*map[string]bool)
+func ReadBooleanArray(reader Reader, v interface{}) (err error) {
+	value := v.(*[]bool)
 	blockLength, err := binary.ReadVarint(reader)
 	if err != nil {
 		return
 	}
-	values := make(map[string]bool, blockLength)
+	values := make([]bool, 0, blockLength)
 	for blockLength != 0 {
 		for i := int64(0); i < blockLength; i++ {
-			var key string
-			err = ReadString(reader, &key)
-			if err != nil {
-				return
-			}
 			var value bool
 			err = ReadBoolean(reader, &value)
 			if err != nil {
 				return
 			}
-			values[key] = value
+			values = append(values, value)
 		}
 		blockLength, err = binary.ReadVarint(reader)
 		if err != nil {
@@ -32,26 +27,21 @@ func ReadBooleanMap(reader Reader, v interface{}) (err error) {
 	return
 }
 
-func ReadIntMap(reader Reader, v interface{}) (err error) {
-	value := v.(*map[string]int32)
+func ReadIntArray(reader Reader, v interface{}) (err error) {
+	value := v.(*[]int32)
 	blockLength, err := binary.ReadVarint(reader)
 	if err != nil {
 		return
 	}
-	values := make(map[string]int32, blockLength)
+	values := make([]int32, 0, blockLength)
 	for blockLength != 0 {
 		for i := int64(0); i < blockLength; i++ {
-			var key string
-			err = ReadString(reader, &key)
-			if err != nil {
-				return
-			}
 			var value int32
 			err = ReadInt(reader, &value)
 			if err != nil {
 				return
 			}
-			values[key] = value
+			values = append(values, value)
 		}
 		blockLength, err = binary.ReadVarint(reader)
 		if err != nil {
@@ -62,26 +52,21 @@ func ReadIntMap(reader Reader, v interface{}) (err error) {
 	return
 }
 
-func ReadLongMap(reader Reader, v interface{}) (err error) {
-	value := v.(*map[string]int64)
+func ReadLongArray(reader Reader, v interface{}) (err error) {
+	value := v.(*[]int64)
 	blockLength, err := binary.ReadVarint(reader)
 	if err != nil {
 		return
 	}
-	values := make(map[string]int64, blockLength)
+	values := make([]int64, 0, blockLength)
 	for blockLength != 0 {
 		for i := int64(0); i < blockLength; i++ {
-			var key string
-			err = ReadString(reader, &key)
-			if err != nil {
-				return
-			}
 			var value int64
 			err = ReadLong(reader, &value)
 			if err != nil {
 				return
 			}
-			values[key] = value
+			values = append(values, value)
 		}
 		blockLength, err = binary.ReadVarint(reader)
 		if err != nil {
@@ -92,26 +77,21 @@ func ReadLongMap(reader Reader, v interface{}) (err error) {
 	return
 }
 
-func ReadFloatMap(reader Reader, v interface{}) (err error) {
-	value := v.(*map[string]float32)
+func ReadFloatArray(reader Reader, v interface{}) (err error) {
+	value := v.(*[]float32)
 	blockLength, err := binary.ReadVarint(reader)
 	if err != nil {
 		return
 	}
-	values := make(map[string]float32, blockLength)
+	values := make([]float32, 0, blockLength)
 	for blockLength != 0 {
 		for i := int64(0); i < blockLength; i++ {
-			var key string
-			err = ReadString(reader, &key)
-			if err != nil {
-				return
-			}
 			var value float32
 			err = ReadFloat(reader, &value)
 			if err != nil {
 				return
 			}
-			values[key] = value
+			values = append(values, value)
 		}
 		blockLength, err = binary.ReadVarint(reader)
 		if err != nil {
@@ -122,26 +102,21 @@ func ReadFloatMap(reader Reader, v interface{}) (err error) {
 	return
 }
 
-func ReadDoubleMap(reader Reader, v interface{}) (err error) {
-	value := v.(*map[string]float64)
+func ReadDoubleArray(reader Reader, v interface{}) (err error) {
+	value := v.(*[]float64)
 	blockLength, err := binary.ReadVarint(reader)
 	if err != nil {
 		return
 	}
-	values := make(map[string]float64, blockLength)
+	values := make([]float64, 0, blockLength)
 	for blockLength != 0 {
 		for i := int64(0); i < blockLength; i++ {
-			var key string
-			err = ReadString(reader, &key)
-			if err != nil {
-				return
-			}
 			var value float64
 			err = ReadDouble(reader, &value)
 			if err != nil {
 				return
 			}
-			values[key] = value
+			values = append(values, value)
 		}
 		blockLength, err = binary.ReadVarint(reader)
 		if err != nil {
@@ -152,26 +127,21 @@ func ReadDoubleMap(reader Reader, v interface{}) (err error) {
 	return
 }
 
-func ReadBytesMap(reader Reader, v interface{}) (err error) {
-	value := v.(*map[string][]byte)
+func ReadBytesArray(reader Reader, v interface{}) (err error) {
+	value := v.(*[][]byte)
 	blockLength, err := binary.ReadVarint(reader)
 	if err != nil {
 		return
 	}
-	values := make(map[string][]byte, blockLength)
+	values := make([][]byte, 0, blockLength)
 	for blockLength != 0 {
 		for i := int64(0); i < blockLength; i++ {
-			var key string
-			err = ReadString(reader, &key)
-			if err != nil {
-				return
-			}
 			var value []byte
 			err = ReadBytes(reader, &value)
 			if err != nil {
 				return
 			}
-			values[key] = value
+			values = append(values, value)
 		}
 		blockLength, err = binary.ReadVarint(reader)
 		if err != nil {
@@ -182,26 +152,21 @@ func ReadBytesMap(reader Reader, v interface{}) (err error) {
 	return
 }
 
-func ReadStringMap(reader Reader, v interface{}) (err error) {
-	value := v.(*map[string]string)
+func ReadStringArray(reader Reader, v interface{}) (err error) {
+	value := v.(*[]string)
 	blockLength, err := binary.ReadVarint(reader)
 	if err != nil {
 		return
 	}
-	values := make(map[string]string, blockLength)
+	values := make([]string, 0, blockLength)
 	for blockLength != 0 {
 		for i := int64(0); i < blockLength; i++ {
-			var key string
-			err = ReadString(reader, &key)
-			if err != nil {
-				return
-			}
 			var value string
 			err = ReadString(reader, &value)
 			if err != nil {
 				return
 			}
-			values[key] = value
+			values = append(values, value)
 		}
 		blockLength, err = binary.ReadVarint(reader)
 		if err != nil {

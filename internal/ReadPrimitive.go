@@ -1,4 +1,4 @@
-package avro
+package internal
 
 import (
 	"encoding/binary"

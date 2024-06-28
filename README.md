@@ -1,24 +1,21 @@
 # Avro Go
-
-## Implemented
-### Encoder
-
-### Decoder
-
-## Not implemented
-### Encoder
+## Not yet implemented
+### Binary Encoder
 - pointer receivers
-- union containing
+- union containing*
     - record
     - array
     - map
 
-### Decoder
+#### Union containing*
+The optional case has been implmented
+
+### Binary Decoder
 - aliases
 - default
 - array of union
 - map of union
-- union containing
+- union containing*
     - record
     - array of
         - record
@@ -35,7 +32,7 @@
         - fixed
         - union
 
-#### Union containing
+#### Union containing*
 The optional case has been implemented.
 
 Enum and fixed should be able to be implemented without issue as their types are known.
@@ -43,3 +40,12 @@ Record, array and map could be implemented by
 - Record: map[string]interface{}
 - Array: []interface{}
 - Map: map[string]interface{}
+
+### JSON Encoding
+All.
+
+## Object Container Files
+All.
+
+### Protocol Wire Format
+All.

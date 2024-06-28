@@ -46,8 +46,22 @@ func TestEncode(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(buffer.Bytes(), ShouldResemble, []byte{0x54})
 			})
-			// float
-			// double
+			Convey("float", func() {
+				schema := avroschema.AvroTypeFloat
+				var buffer bytes.Buffer
+				encoder := avro.NewEncoder(&buffer, schema)
+				err := encoder.Encode(float32(42.0))
+				So(err, ShouldBeNil)
+				So(buffer.Bytes(), ShouldResemble, []byte{0, 0, 40, 66})
+			})
+			Convey("double", func() {
+				schema := avroschema.AvroTypeDouble
+				var buffer bytes.Buffer
+				encoder := avro.NewEncoder(&buffer, schema)
+				err := encoder.Encode(float64(42.0))
+				So(err, ShouldBeNil)
+				So(buffer.Bytes(), ShouldResemble, []byte{0, 0, 0, 0, 0, 0, 69, 64})
+			})
 			Convey("bytes", func() {
 				schema := avroschema.AvroTypeBytes
 				var buffer bytes.Buffer
@@ -184,6 +198,125 @@ func TestEncode(t *testing.T) {
 						So(err, ShouldBeNil)
 						So(buffer.Bytes(), ShouldResemble, []byte{0x04, 0x06, 0x66, 0x6f, 0x6f})
 					})
+					Convey("optional", func() {
+						Convey("int inside record", func() {
+							type Person struct {
+								Name string `avro:"name"`
+								Age  *int32 `avro:"age"`
+							}
+							schema := &avroschema.Record{
+								SchemaBase: avroschema.SchemaBase{
+									Type: avroschema.AvroTypeRecord,
+								},
+								NamedType: avroschema.NamedType{
+									Name: "Person",
+								},
+								Fields: []*avroschema.RecordField{
+									{
+										Name: "name",
+										Type: avroschema.AvroTypeString,
+									},
+									{
+										Name: "age",
+										Type: avroschema.Union{
+											avroschema.AvroTypeNull,
+											avroschema.AvroTypeInt,
+										},
+									},
+								},
+							}
+							Convey("null", func() {
+								value := Person{
+									Name: "foo",
+								}
+								var buffer bytes.Buffer
+								err := avro.NewEncoder(&buffer, schema).Encode(value)
+								So(err, ShouldBeNil)
+								So(buffer.Bytes(), ShouldResemble, []byte{0x06, 0x66, 0x6f, 0x6f, 0x00})
+							})
+							Convey("int", func() {
+								age := int32(42)
+								value := Person{
+									Name: "foo",
+									Age:  &age,
+								}
+								var buffer bytes.Buffer
+								err := avro.NewEncoder(&buffer, schema).Encode(value)
+								So(err, ShouldBeNil)
+								So(buffer.Bytes(), ShouldResemble, []byte{0x06, 0x66, 0x6f, 0x6f, 0x02, 0x54})
+							})
+						})
+						Convey("record inside record", func() {
+							type Info struct {
+								Name string `avro:"name"`
+								Age  int32  `avro:"age"`
+							}
+							type Person struct {
+								ID   int32 `avro:"id"`
+								Info *Info `avro:"info"`
+							}
+							schema := &avroschema.Record{
+								SchemaBase: avroschema.SchemaBase{
+									Type: avroschema.AvroTypeRecord,
+								},
+								NamedType: avroschema.NamedType{
+									Name: "Person",
+								},
+								Fields: []*avroschema.RecordField{
+									{
+										Name: "id",
+										Type: avroschema.AvroTypeInt,
+									},
+									{
+										Name: "info",
+										Type: avroschema.Union{
+											avroschema.AvroTypeNull,
+											&avroschema.Record{
+												SchemaBase: avroschema.SchemaBase{
+													Type: avroschema.AvroTypeRecord,
+												},
+												NamedType: avroschema.NamedType{
+													Name: "Info",
+												},
+												Fields: []*avroschema.RecordField{
+													{
+														Name: "name",
+														Type: avroschema.AvroTypeString,
+													},
+													{
+														Name: "age",
+														Type: avroschema.AvroTypeInt,
+													},
+												},
+											},
+										},
+									},
+								},
+							}
+							Convey("null", func() {
+								value := Person{
+									ID: 42,
+								}
+								var buffer bytes.Buffer
+								err := avro.NewEncoder(&buffer, schema).Encode(value)
+								So(err, ShouldBeNil)
+								So(buffer.Bytes(), ShouldResemble, []byte{0x54, 0x00})
+							})
+							Convey("record", func() {
+								value := Person{
+									ID: 42,
+									Info: &Info{
+										Name: "foo",
+										Age:  43,
+									},
+								}
+								var buffer bytes.Buffer
+								err := avro.NewEncoder(&buffer, schema).Encode(value)
+								So(err, ShouldBeNil)
+								So(buffer.Bytes(), ShouldResemble, []byte{0x54, 0x02, 0x06, 0x66, 0x6f, 0x6f, 0x56})
+							})
+						})
+					})
 				})
 			})
 		})
@@ -218,6 +351,26 @@ func BenchmarkEncodeLong(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		encoder.Encode(int64(i))
+	}
+}
+
+func BenchmarkEncodeFloat(b *testing.B) {
+	schema := avroschema.AvroTypeFloat
+	var buffer bytes.Buffer
+	encoder := avro.NewEncoder(&buffer, schema)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		encoder.Encode(float32(i))
+	}
+}
+
+func BenchmarkEncodeDouble(b *testing.B) {
+	schema := avroschema.AvroTypeDouble
+	var buffer bytes.Buffer
+	encoder := avro.NewEncoder(&buffer, schema)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		encoder.Encode(float64(i))
 	}
 }
 

@@ -3,25 +3,18 @@ package avro
 import (
 	"encoding/binary"
 	"fmt"
-	"io"
 	"reflect"
 
 	"tps-git.topcon.com/cloud/avro/avroschema"
+	"tps-git.topcon.com/cloud/avro/internal"
 )
 
-type Reader interface {
-	io.Reader
-	io.ByteReader
-}
-
 type Decoder struct {
-	reader Reader
-	decode decodeFunc
+	reader internal.Reader
+	decode internal.DecodeFunc
 }
 
-type decodeFunc func(reader Reader, v interface{}) error
-
-func NewDecoder(reader Reader, schema avroschema.Schema) *Decoder {
+func NewDecoder(reader internal.Reader, schema avroschema.Schema) *Decoder {
 	return &Decoder{
 		reader: reader,
 		decode: getDecodeFuncForSchema(schema),
@@ -32,22 +25,22 @@ func (decoder *Decoder) Decode(v interface{}) (err error) {
 	return decoder.decode(decoder.reader, v)
 }
 
-func getDecodeFuncForSchema(schema avroschema.Schema) decodeFunc {
+func getDecodeFuncForSchema(schema avroschema.Schema) internal.DecodeFunc {
 	switch schema.GetType() {
 	case avroschema.AvroTypeBoolean:
-		return ReadBoolean
+		return internal.ReadBoolean
 	case avroschema.AvroTypeInt:
-		return ReadInt
+		return internal.ReadInt
 	case avroschema.AvroTypeLong:
-		return ReadLong
+		return internal.ReadLong
 	case avroschema.AvroTypeFloat:
-		return ReadFloat
+		return internal.ReadFloat
 	case avroschema.AvroTypeDouble:
-		return ReadDouble
+		return internal.ReadDouble
 	case avroschema.AvroTypeBytes:
-		return ReadBytes
+		return internal.ReadBytes
 	case avroschema.AvroTypeString:
-		return ReadString
+		return internal.ReadString
 	case avroschema.AvroTypeRecord:
 		avroRecord := schema.(*avroschema.Record)
 		return getDecodeFuncForRecord(avroRecord)
@@ -71,10 +64,10 @@ func getDecodeFuncForSchema(schema avroschema.Schema) decodeFunc {
 	}
 }
 
-func getDecodeFuncForRecord(avroRecord *avroschema.Record) decodeFunc {
+func getDecodeFuncForRecord(avroRecord *avroschema.Record) internal.DecodeFunc {
 	type frame struct {
 		name   string
-		decode decodeFunc
+		decode internal.DecodeFunc
 	}
 	decodeFuncSlice := make([]frame, 0, len(avroRecord.Fields))
 	for _, field := range avroRecord.Fields {
@@ -84,7 +77,7 @@ func getDecodeFuncForRecord(avroRecord *avroschema.Record) decodeFunc {
 			decode: decode,
 		})
 	}
-	return func(reader Reader, v interface{}) (err error) {
+	return func(reader internal.Reader, v interface{}) (err error) {
 		val := reflect.ValueOf(v)
 		if val.Kind() != reflect.Ptr {
 			panic(fmt.Errorf("pointer expected, got %s", val.Kind()))
@@ -109,9 +102,9 @@ func getDecodeFuncForRecord(avroRecord *avroschema.Record) decodeFunc {
 	}
 }
 
-func getDecodeFuncForEnum(avroEnum *avroschema.Enum) decodeFunc {
+func getDecodeFuncForEnum(avroEnum *avroschema.Enum) internal.DecodeFunc {
 	symbols := avroEnum.Symbols
-	return func(reader Reader, v interface{}) (err error) {
+	return func(reader internal.Reader, v interface{}) (err error) {
 		value := v.(*string)
 		index, err := binary.ReadVarint(reader)
 		if err != nil {
@@ -126,22 +119,22 @@ func getDecodeFuncForEnum(avroEnum *avroschema.Enum) decodeFunc {
 	}
 }
 
-func getDecodeFuncForArray(avroArray *avroschema.Array) decodeFunc {
+func getDecodeFuncForArray(avroArray *avroschema.Array) internal.DecodeFunc {
 	switch avroArray.Items.GetType() {
 	case avroschema.AvroTypeBoolean:
-		return ReadBooleanArray
+		return internal.ReadBooleanArray
 	case avroschema.AvroTypeInt:
-		return ReadIntArray
+		return internal.ReadIntArray
 	case avroschema.AvroTypeLong:
-		return ReadLongArray
+		return internal.ReadLongArray
 	case avroschema.AvroTypeFloat:
-		return ReadFloatArray
+		return internal.ReadFloatArray
 	case avroschema.AvroTypeDouble:
-		return ReadDoubleArray
+		return internal.ReadDoubleArray
 	case avroschema.AvroTypeBytes:
-		return ReadBytesArray
+		return internal.ReadBytesArray
 	case avroschema.AvroTypeString:
-		return ReadStringArray
+		return internal.ReadStringArray
 	case avroschema.AvroTypeRecord:
 		decode := getDecodeFuncForRecord(avroArray.Items.(*avroschema.Record))
 		return getDecodeFuncForComplexArray(decode)
@@ -164,8 +157,8 @@ func getDecodeFuncForArray(avroArray *avroschema.Array) decodeFunc {
 	}
 }
 
-func getDecodeFuncForComplexArray(decode decodeFunc) decodeFunc {
-	return func(reader Reader, v interface{}) (err error) {
+func getDecodeFuncForComplexArray(decode internal.DecodeFunc) internal.DecodeFunc {
+	return func(reader internal.Reader, v interface{}) (err error) {
 		val := reflect.ValueOf(v)
 		if val.Kind() != reflect.Ptr {
 			panic(fmt.Errorf("pointer expected, got %s", val.Kind()))
@@ -197,22 +190,22 @@ func getDecodeFuncForComplexArray(decode decodeFunc) decodeFunc {
 	}
 }
 
-func getDecodeFuncForMap(avroMap *avroschema.Map) decodeFunc {
+func getDecodeFuncForMap(avroMap *avroschema.Map) internal.DecodeFunc {
 	switch avroMap.Values.GetType() {
 	case avroschema.AvroTypeBoolean:
-		return ReadBooleanMap
+		return internal.ReadBooleanMap
 	case avroschema.AvroTypeInt:
-		return ReadIntMap
+		return internal.ReadIntMap
 	case avroschema.AvroTypeLong:
-		return ReadLongMap
+		return internal.ReadLongMap
 	case avroschema.AvroTypeFloat:
-		return ReadFloatMap
+		return internal.ReadFloatMap
 	case avroschema.AvroTypeDouble:
-		return ReadDoubleMap
+		return internal.ReadDoubleMap
 	case avroschema.AvroTypeBytes:
-		return ReadBytesMap
+		return internal.ReadBytesMap
 	case avroschema.AvroTypeString:
-		return ReadStringMap
+		return internal.ReadStringMap
 	case avroschema.AvroTypeRecord:
 		decode := getDecodeFuncForRecord(avroMap.Values.(*avroschema.Record))
 		return getDecodeFuncForComplexMap(decode)
@@ -235,8 +228,8 @@ func getDecodeFuncForMap(avroMap *avroschema.Map) decodeFunc {
 	}
 }
 
-func getDecodeFuncForComplexMap(decode decodeFunc) decodeFunc {
-	return func(reader Reader, v interface{}) (err error) {
+func getDecodeFuncForComplexMap(decode internal.DecodeFunc) internal.DecodeFunc {
+	return func(reader internal.Reader, v interface{}) (err error) {
 		val := reflect.ValueOf(v)
 		if val.Kind() != reflect.Ptr {
 			panic(fmt.Errorf("pointer expected, got %s", val.Kind()))
@@ -253,7 +246,7 @@ func getDecodeFuncForComplexMap(decode decodeFunc) decodeFunc {
 		for blockLength != 0 {
 			for i := int64(0); i < blockLength; i++ {
 				key := reflect.New(reflect.TypeOf("")).Interface()
-				err = ReadString(reader, key)
+				err = internal.ReadString(reader, key)
 				if err != nil {
 					return
 				}
@@ -273,9 +266,9 @@ func getDecodeFuncForComplexMap(decode decodeFunc) decodeFunc {
 	}
 }
 
-func getDecodeFuncForFixed(avroFixed *avroschema.Fixed) decodeFunc {
+func getDecodeFuncForFixed(avroFixed *avroschema.Fixed) internal.DecodeFunc {
 	expectedLength := avroFixed.Size
-	return func(reader Reader, v interface{}) (err error) {
+	return func(reader internal.Reader, v interface{}) (err error) {
 		val := reflect.ValueOf(v)
 		if val.Kind() != reflect.Ptr {
 			panic(fmt.Errorf("pointer expected, got %s", val.Kind()))
@@ -300,35 +293,35 @@ func getDecodeFuncForFixed(avroFixed *avroschema.Fixed) decodeFunc {
 	}
 }
 
-func getDecodeFuncForUnion(avroUnion avroschema.Union) decodeFunc {
-	if isOptional(avroUnion) {
+func getDecodeFuncForUnion(avroUnion avroschema.Union) internal.DecodeFunc {
+	if internal.IsOptional(avroUnion) {
 		return getDecodeFuncForOptional(avroUnion)
 	}
-	decodeFuncs := make([]decodeFunc, 0, len(avroUnion))
+	decodeFuncs := make([]internal.DecodeFunc, 0, len(avroUnion))
 	for _, schema := range avroUnion {
-		var decode decodeFunc
+		var decode internal.DecodeFunc
 		switch schema.GetType() {
 		case avroschema.AvroTypeNull:
-			decode = ReadUnionNull
+			decode = internal.ReadUnionNull
 		case avroschema.AvroTypeBoolean:
-			decode = ReadUnionBoolean
+			decode = internal.ReadUnionBoolean
 		case avroschema.AvroTypeInt:
-			decode = ReadUnionInt
+			decode = internal.ReadUnionInt
 		case avroschema.AvroTypeLong:
-			decode = ReadUnionLong
+			decode = internal.ReadUnionLong
 		case avroschema.AvroTypeFloat:
-			decode = ReadUnionFloat
+			decode = internal.ReadUnionFloat
 		case avroschema.AvroTypeDouble:
-			decode = ReadUnionDouble
+			decode = internal.ReadUnionDouble
 		case avroschema.AvroTypeBytes:
-			decode = ReadUnionBytes
+			decode = internal.ReadUnionBytes
 		case avroschema.AvroTypeString:
-			decode = ReadUnionString
+			decode = internal.ReadUnionString
 		case avroschema.AvroTypeRecord:
 			panic("record not implemented")
 		case avroschema.AvroTypeEnum:
 			avroEnum := schema.(*avroschema.Enum)
-			decode = makeReadUnionValue(reflect.TypeOf(""), getDecodeFuncForEnum(avroEnum))
+			decode = internal.MakeReadUnionValue(reflect.TypeOf(""), getDecodeFuncForEnum(avroEnum))
 		case avroschema.AvroTypeArray:
 			avroArray := schema.(*avroschema.Array)
 			decode = getDecodeFuncForUnionArray(avroArray)
@@ -345,7 +338,7 @@ func getDecodeFuncForUnion(avroUnion avroschema.Union) decodeFunc {
 		}
 		decodeFuncs = append(decodeFuncs, decode)
 	}
-	return func(reader Reader, v interface{}) (err error) {
+	return func(reader internal.Reader, v interface{}) (err error) {
 		index, err := binary.ReadVarint(reader)
 		if err != nil {
 			return
@@ -359,21 +352,8 @@ func getDecodeFuncForUnion(avroUnion avroschema.Union) decodeFunc {
 	}
 }
 
-func isOptional(avroUnion avroschema.Union) bool {
-	if len(avroUnion) != 2 {
-		return false
-	}
-	if avroUnion[0].GetType() == avroschema.AvroTypeNull {
-		return true
-	}
-	if avroUnion[1].GetType() == avroschema.AvroTypeNull {
-		return true
-	}
-	return false
-}
-
-func getDecodeFuncForOptional(avroUnion avroschema.Union) decodeFunc {
-	var decode decodeFunc
+func getDecodeFuncForOptional(avroUnion avroschema.Union) internal.DecodeFunc {
+	var decode internal.DecodeFunc
 	indexOfNull := int64(0)
 	for i, schema := range avroUnion {
 		switch schema.GetType() {
@@ -383,13 +363,13 @@ func getDecodeFuncForOptional(avroUnion avroschema.Union) decodeFunc {
 			decode = getDecodeFuncForSchema(schema)
 		}
 	}
-	return func(reader Reader, v interface{}) (err error) {
+	return func(reader internal.Reader, v interface{}) (err error) {
 		index, err := binary.ReadVarint(reader)
 		if err != nil {
 			return
 		}
 		if index == indexOfNull {
-			ReadUnionNull(reader, v)
+			internal.ReadUnionNull(reader, v)
 			return
 		}
 		val := reflect.ValueOf(v)
@@ -407,22 +387,22 @@ func getDecodeFuncForOptional(avroUnion avroschema.Union) decodeFunc {
 	}
 }
 
-func getDecodeFuncForUnionArray(avroArray *avroschema.Array) decodeFunc {
+func getDecodeFuncForUnionArray(avroArray *avroschema.Array) internal.DecodeFunc {
 	switch avroArray.Items.GetType() {
 	case avroschema.AvroTypeBoolean:
-		return ReadUnionBooleanArray
+		return internal.ReadUnionBooleanArray
 	case avroschema.AvroTypeInt:
-		return ReadUnionIntArray
+		return internal.ReadUnionIntArray
 	case avroschema.AvroTypeLong:
-		return ReadUnionLongArray
+		return internal.ReadUnionLongArray
 	case avroschema.AvroTypeFloat:
-		return ReadUnionFloatArray
+		return internal.ReadUnionFloatArray
 	case avroschema.AvroTypeDouble:
-		return ReadUnionDoubleArray
+		return internal.ReadUnionDoubleArray
 	case avroschema.AvroTypeBytes:
-		return ReadUnionBytesArray
+		return internal.ReadUnionBytesArray
 	case avroschema.AvroTypeString:
-		return ReadUnionStringArray
+		return internal.ReadUnionStringArray
 	case avroschema.AvroTypeRecord:
 		panic("record not implemented")
 	case avroschema.AvroTypeEnum:
@@ -440,22 +420,22 @@ func getDecodeFuncForUnionArray(avroArray *avroschema.Array) decodeFunc {
 	}
 }
 
-func getDecodeFuncForUnionMap(avroMap *avroschema.Map) decodeFunc {
+func getDecodeFuncForUnionMap(avroMap *avroschema.Map) internal.DecodeFunc {
 	switch avroMap.Values.GetType() {
 	case avroschema.AvroTypeBoolean:
-		return ReadUnionBooleanMap
+		return internal.ReadUnionBooleanMap
 	case avroschema.AvroTypeInt:
-		return ReadUnionIntMap
+		return internal.ReadUnionIntMap
 	case avroschema.AvroTypeLong:
-		return ReadUnionLongMap
+		return internal.ReadUnionLongMap
 	case avroschema.AvroTypeFloat:
-		return ReadUnionFloatMap
+		return internal.ReadUnionFloatMap
 	case avroschema.AvroTypeDouble:
-		return ReadUnionDoubleMap
+		return internal.ReadUnionDoubleMap
 	case avroschema.AvroTypeBytes:
-		return ReadUnionBytesMap
+		return internal.ReadUnionBytesMap
 	case avroschema.AvroTypeString:
-		return ReadUnionStringMap
+		return internal.ReadUnionStringMap
 	case avroschema.AvroTypeRecord:
 		panic("record not implemented")
 	case avroschema.AvroTypeEnum:
@@ -473,10 +453,10 @@ func getDecodeFuncForUnionMap(avroMap *avroschema.Map) decodeFunc {
 	}
 }
 
-func getDecodeFuncForUnionFixed(avroFixed *avroschema.Fixed) decodeFunc {
+func getDecodeFuncForUnionFixed(avroFixed *avroschema.Fixed) internal.DecodeFunc {
 	expectedLength := avroFixed.Size
 	decode := getDecodeFuncForFixed(avroFixed)
-	return func(reader Reader, v interface{}) (err error) {
+	return func(reader internal.Reader, v interface{}) (err error) {
 		value := make([]byte, expectedLength)
 		err = decode(reader, &value)
 		if err != nil {

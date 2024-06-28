@@ -6,14 +6,13 @@ import (
 	"reflect"
 
 	"tps-git.topcon.com/cloud/avro/avroschema"
+	"tps-git.topcon.com/cloud/avro/internal"
 )
 
 type Encoder struct {
 	writer io.Writer
-	encode EncodeFunc
+	encode internal.EncodeFunc
 }
-
-type EncodeFunc func(writer io.Writer, v interface{}) error
 
 func NewEncoder(writer io.Writer, schema avroschema.Schema) *Encoder {
 	return &Encoder{
@@ -26,24 +25,24 @@ func (encoder *Encoder) Encode(v interface{}) (err error) {
 	return encoder.encode(encoder.writer, v)
 }
 
-func getEncodeFuncForSchema(schema avroschema.Schema) EncodeFunc {
+func getEncodeFuncForSchema(schema avroschema.Schema) internal.EncodeFunc {
 	switch schema.GetType() {
 	case avroschema.AvroTypeNull:
-		return WriteNull
+		return internal.WriteNull
 	case avroschema.AvroTypeBoolean:
-		return WriteBoolean
+		return internal.WriteBoolean
 	case avroschema.AvroTypeInt:
-		return WriteInt
+		return internal.WriteInt
 	case avroschema.AvroTypeLong:
-		return WriteLong
+		return internal.WriteLong
 	case avroschema.AvroTypeFloat:
-		return WriteFloat
+		return internal.WriteFloat
 	case avroschema.AvroTypeDouble:
-		return WriteDouble
+		return internal.WriteDouble
 	case avroschema.AvroTypeBytes:
-		return WriteBytes
+		return internal.WriteBytes
 	case avroschema.AvroTypeString:
-		return WriteString
+		return internal.WriteString
 	case avroschema.AvroTypeRecord:
 		avroRecord := schema.(*avroschema.Record)
 		return getEncodeFuncForRecord(avroRecord)
@@ -67,10 +66,10 @@ func getEncodeFuncForSchema(schema avroschema.Schema) EncodeFunc {
 	}
 }
 
-func getEncodeFuncForRecord(avroRecord *avroschema.Record) EncodeFunc {
+func getEncodeFuncForRecord(avroRecord *avroschema.Record) internal.EncodeFunc {
 	type frame struct {
 		name   string
-		encode EncodeFunc
+		encode internal.EncodeFunc
 	}
 	frames := make([]frame, 0, len(avroRecord.Fields))
 	for _, field := range avroRecord.Fields {
@@ -108,7 +107,7 @@ func getEncodeFuncForRecord(avroRecord *avroschema.Record) EncodeFunc {
 	}
 }
 
-func getEncodeFuncForEnum(avroEnum *avroschema.Enum) EncodeFunc {
+func getEncodeFuncForEnum(avroEnum *avroschema.Enum) internal.EncodeFunc {
 	index := make(map[string]int)
 	for i, symbol := range avroEnum.Symbols {
 		index[symbol] = i
@@ -119,12 +118,12 @@ func getEncodeFuncForEnum(avroEnum *avroschema.Enum) EncodeFunc {
 		if !ok {
 			return fmt.Errorf("symbol %s not found", value)
 		}
-		return WriteInt(writer, int32(i))
+		return internal.WriteInt(writer, int32(i))
 	}
 }
 
-func getEncodeFuncForArray(avroArray *avroschema.Array) EncodeFunc {
-	encode, ok := encodeArrayByType[avroArray.Items.GetType()]
+func getEncodeFuncForArray(avroArray *avroschema.Array) internal.EncodeFunc {
+	encode, ok := internal.EncodeArrayByType[avroArray.Items.GetType()]
 	if ok {
 		return encode
 	}
@@ -142,7 +141,7 @@ func getEncodeFuncForArray(avroArray *avroschema.Array) EncodeFunc {
 		if val.Kind() != reflect.Slice {
 			panic(fmt.Errorf("expected a slice, got %T", v))
 		}
-		err = WriteLong(writer, int64(val.Len()))
+		err = internal.WriteLong(writer, int64(val.Len()))
 		if err != nil {
 			return
 		}
@@ -160,11 +159,11 @@ func getEncodeFuncForArray(avroArray *avroschema.Array) EncodeFunc {
 	}
 }
 
-func getEncodeFuncForEnumArray(avroEnum *avroschema.Enum) EncodeFunc {
+func getEncodeFuncForEnumArray(avroEnum *avroschema.Enum) internal.EncodeFunc {
 	encode := getEncodeFuncForEnum(avroEnum)
 	return func(writer io.Writer, v interface{}) (err error) {
 		value := v.([]string)
-		err = WriteLong(writer, int64(len(value)))
+		err = internal.WriteLong(writer, int64(len(value)))
 		if err != nil {
 			return
 		}
@@ -182,11 +181,11 @@ func getEncodeFuncForEnumArray(avroEnum *avroschema.Enum) EncodeFunc {
 	}
 }
 
-func getEncodeFuncForFixedArray(avroFixed *avroschema.Fixed) EncodeFunc {
+func getEncodeFuncForFixedArray(avroFixed *avroschema.Fixed) internal.EncodeFunc {
 	encode := getEncodeFuncForFixed(avroFixed)
 	return func(writer io.Writer, v interface{}) (err error) {
 		value := v.([][]byte)
-		err = WriteLong(writer, int64(len(value)))
+		err = internal.WriteLong(writer, int64(len(value)))
 		if err != nil {
 			return
 		}
@@ -204,8 +203,8 @@ func getEncodeFuncForFixedArray(avroFixed *avroschema.Fixed) EncodeFunc {
 	}
 }
 
-func getEncodeFuncForMap(avroMap *avroschema.Map) EncodeFunc {
-	encode, ok := encodeMapByType[avroMap.Values.GetType()]
+func getEncodeFuncForMap(avroMap *avroschema.Map) internal.EncodeFunc {
+	encode, ok := internal.EncodeMapByType[avroMap.Values.GetType()]
 	if ok {
 		return encode
 	}
@@ -215,13 +214,13 @@ func getEncodeFuncForMap(avroMap *avroschema.Map) EncodeFunc {
 		if val.Kind() != reflect.Map {
 			panic(fmt.Errorf("expected a map, got %T", v))
 		}
-		err = WriteLong(writer, int64(val.Len()))
+		err = internal.WriteLong(writer, int64(val.Len()))
 		if err != nil {
 			return
 		}
 		for _, keyVal := range val.MapKeys() {
 			key := keyVal.String()
-			err = WriteString(writer, key)
+			err = internal.WriteString(writer, key)
 			if err != nil {
 				return
 			}
@@ -238,7 +237,7 @@ func getEncodeFuncForMap(avroMap *avroschema.Map) EncodeFunc {
 	}
 }
 
-func getEncodeFuncForFixed(avroFixed *avroschema.Fixed) EncodeFunc {
+func getEncodeFuncForFixed(avroFixed *avroschema.Fixed) internal.EncodeFunc {
 	size := avroFixed.Size
 	return func(writer io.Writer, v interface{}) (err error) {
 		value := v.([]byte)
@@ -253,25 +252,56 @@ func getEncodeFuncForFixed(avroFixed *avroschema.Fixed) EncodeFunc {
 	}
 }
 
-func getEncodeFuncForUnion(avroUnion avroschema.Union) EncodeFunc {
-	indices := make(map[reflect.Type]int)
-	encodeFuncs := make([]EncodeFunc, len(avroUnion))
+func getEncodeFuncForUnion(avroUnion avroschema.Union) internal.EncodeFunc {
+	if internal.IsOptional(avroUnion) {
+		return getEncodeFuncForOptional(avroUnion)
+	}
+	indexByType := make(map[reflect.Type]int)
+	encodeFuncs := make([]internal.EncodeFunc, len(avroUnion))
 	for i, schema := range avroUnion {
-		indices[getGoTypeForSchema(schema)] = i
+		indexByType[getGoTypeForSchema(schema)] = i
 		encodeFuncs[i] = getEncodeFuncForSchema(schema)
 	}
 	return func(writer io.Writer, v interface{}) (err error) {
 		typ := reflect.TypeOf(v)
-		index, ok := indices[typ]
+		index, ok := indexByType[typ]
 		if !ok {
 			panic(fmt.Errorf("type %s not supported", typ))
 		}
-		err = WriteInt(writer, int32(index))
+		err = internal.WriteInt(writer, int32(index))
 		if err != nil {
 			return
 		}
 		encode := encodeFuncs[index]
 		return encode(writer, v)
+	}
+}
+
+func getEncodeFuncForOptional(avroUnion avroschema.Union) internal.EncodeFunc {
+	var encode internal.EncodeFunc
+	indexOfNull := int64(0)
+	indexOfValue := int64(1)
+	for i, schema := range avroUnion {
+		if schema.GetType() == avroschema.AvroTypeNull {
+			indexOfNull = int64(i)
+		} else {
+			indexOfValue = int64(i)
+			encode = getEncodeFuncForSchema(schema)
+		}
+	}
+	return func(writer io.Writer, v interface{}) (err error) {
+		val := reflect.ValueOf(v)
+		if val.Kind() != reflect.Ptr {
+			return encode(writer, v)
+		}
+		if val.IsNil() {
+			return internal.WriteLong(writer, indexOfNull)
+		}
+		err = internal.WriteLong(writer, indexOfValue)
+		if err != nil {
+			return
+		}
+		return encode(writer, val.Elem().Interface())
 	}
 }
 

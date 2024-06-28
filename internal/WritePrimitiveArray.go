@@ -1,4 +1,4 @@
-package avro
+package internal
 
 import (
 	"io"
@@ -6,7 +6,7 @@ import (
 	"tps-git.topcon.com/cloud/avro/avroschema"
 )
 
-var encodeArrayByType = map[avroschema.AvroType]EncodeFunc{
+var EncodeArrayByType = map[avroschema.AvroType]EncodeFunc{
 	avroschema.AvroTypeBoolean: WriteBooleanArray,
 	avroschema.AvroTypeInt:     WriteIntArray,
 	avroschema.AvroTypeLong:    WriteLongArray,
