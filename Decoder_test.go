@@ -6,8 +6,8 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"tps-git.topcon.com/cloud/avro"
-	"tps-git.topcon.com/cloud/avro/avroschema"
+	"github.com/Ryan-A-B/avro-go"
+	"github.com/Ryan-A-B/avro-go/avroschema"
 )
 
 func TestDecoder(t *testing.T) {
@@ -254,98 +254,128 @@ func TestDecoder(t *testing.T) {
 			})
 			Convey("complex", func() {
 				Convey("record", func() {
-					record := avroschema.Record{
-						SchemaBase: avroschema.SchemaBase{
-							Type: avroschema.AvroTypeRecord,
-						},
-						NamedType: avroschema.NamedType{
-							Name: "ComplexRecord",
-						},
-						Fields: []*avroschema.RecordField{
-							{
-								Name: "nested_record",
-								Type: &avroschema.Record{
-									SchemaBase: avroschema.SchemaBase{
-										Type: avroschema.AvroTypeRecord,
-									},
-									NamedType: avroschema.NamedType{
-										Name: "NestedRecord",
-									},
-									Fields: []*avroschema.RecordField{
-										{
-											Name: "name",
-											Type: avroschema.AvroTypeString,
+					Convey("with nested complex types", func() {
+						record := avroschema.Record{
+							SchemaBase: avroschema.SchemaBase{
+								Type: avroschema.AvroTypeRecord,
+							},
+							NamedType: avroschema.NamedType{
+								Name: "ComplexRecord",
+							},
+							Fields: []*avroschema.RecordField{
+								{
+									Name: "nested_record",
+									Type: &avroschema.Record{
+										SchemaBase: avroschema.SchemaBase{
+											Type: avroschema.AvroTypeRecord,
 										},
-										{
-											Name: "age",
-											Type: avroschema.AvroTypeInt,
+										NamedType: avroschema.NamedType{
+											Name: "NestedRecord",
+										},
+										Fields: []*avroschema.RecordField{
+											{
+												Name: "name",
+												Type: avroschema.AvroTypeString,
+											},
+											{
+												Name: "age",
+												Type: avroschema.AvroTypeInt,
+											},
 										},
 									},
 								},
-							},
-							{
-								Name: "nested_enum",
-								Type: &avroschema.Enum{
-									SchemaBase: avroschema.SchemaBase{
-										Type: avroschema.AvroTypeEnum,
+								{
+									Name: "nested_enum",
+									Type: &avroschema.Enum{
+										SchemaBase: avroschema.SchemaBase{
+											Type: avroschema.AvroTypeEnum,
+										},
+										NamedType: avroschema.NamedType{
+											Name: "NestedEnum",
+										},
+										Symbols: []string{"A", "B", "C"},
 									},
-									NamedType: avroschema.NamedType{
-										Name: "NestedEnum",
+								},
+								{
+									Name: "nested_array",
+									Type: &avroschema.Array{
+										SchemaBase: avroschema.SchemaBase{
+											Type: avroschema.AvroTypeArray,
+										},
+										Items: avroschema.AvroTypeInt,
 									},
-									Symbols: []string{"A", "B", "C"},
+								},
+								{
+									Name: "nested_map",
+									Type: &avroschema.Map{
+										SchemaBase: avroschema.SchemaBase{
+											Type: avroschema.AvroTypeMap,
+										},
+										Values: avroschema.AvroTypeInt,
+									},
+								},
+								{
+									Name: "nested_fixed",
+									Type: &avroschema.Fixed{
+										SchemaBase: avroschema.SchemaBase{
+											Type: avroschema.AvroTypeFixed,
+										},
+										NamedType: avroschema.NamedType{
+											Name: "NestedFixed",
+										},
+										Size: 3,
+									},
 								},
 							},
-							{
-								Name: "nested_array",
-								Type: &avroschema.Array{
-									SchemaBase: avroschema.SchemaBase{
-										Type: avroschema.AvroTypeArray,
-									},
-									Items: avroschema.AvroTypeInt,
-								},
-							},
-							{
-								Name: "nested_map",
-								Type: &avroschema.Map{
-									SchemaBase: avroschema.SchemaBase{
-										Type: avroschema.AvroTypeMap,
-									},
-									Values: avroschema.AvroTypeInt,
-								},
-							},
-							{
-								Name: "nested_fixed",
-								Type: &avroschema.Fixed{
-									SchemaBase: avroschema.SchemaBase{
-										Type: avroschema.AvroTypeFixed,
-									},
-									NamedType: avroschema.NamedType{
-										Name: "NestedFixed",
-									},
-									Size: 3,
-								},
-							},
-						},
-					}
-					data := []byte{0x06, 0x66, 0x6f, 0x6f, 0x54, 0x00, 0x04, 0x54, 0x56, 0x00, 0x02, 0x06, 0x66, 0x6f, 0x6f, 0x54, 0x00, 0x66, 0x6f, 0x6f}
-					var value struct {
-						NestedRecord struct {
+						}
+						data := []byte{0x06, 0x66, 0x6f, 0x6f, 0x54, 0x00, 0x04, 0x54, 0x56, 0x00, 0x02, 0x06, 0x66, 0x6f, 0x6f, 0x54, 0x00, 0x66, 0x6f, 0x6f}
+						var value struct {
+							NestedRecord struct {
+								Name string `avro:"name"`
+								Age  int32  `avro:"age"`
+							} `avro:"nested_record"`
+							NestedEnum  string           `avro:"nested_enum"`
+							NestedArray []int32          `avro:"nested_array"`
+							NestedMap   map[string]int32 `avro:"nested_map"`
+							NestedFixed [3]byte          `avro:"nested_fixed"`
+						}
+						err := avro.NewDecoder(bytes.NewReader(data), &record).Decode(&value)
+						So(err, ShouldBeNil)
+						So(value.NestedRecord.Name, ShouldEqual, "foo")
+						So(value.NestedRecord.Age, ShouldEqual, 42)
+						So(value.NestedEnum, ShouldEqual, "A")
+						So(value.NestedArray, ShouldResemble, []int32{42, 43})
+						So(value.NestedMap, ShouldResemble, map[string]int32{"foo": 42})
+						So(value.NestedFixed, ShouldResemble, [3]byte{0x66, 0x6f, 0x6f})
+					})
+					Convey("without all fields", func() {
+						type Person struct {
 							Name string `avro:"name"`
-							Age  int32  `avro:"age"`
-						} `avro:"nested_record"`
-						NestedEnum  string           `avro:"nested_enum"`
-						NestedArray []int32          `avro:"nested_array"`
-						NestedMap   map[string]int32 `avro:"nested_map"`
-						NestedFixed [3]byte          `avro:"nested_fixed"`
-					}
-					err := avro.NewDecoder(bytes.NewReader(data), &record).Decode(&value)
-					So(err, ShouldBeNil)
-					So(value.NestedRecord.Name, ShouldEqual, "foo")
-					So(value.NestedRecord.Age, ShouldEqual, 42)
-					So(value.NestedEnum, ShouldEqual, "A")
-					So(value.NestedArray, ShouldResemble, []int32{42, 43})
-					So(value.NestedMap, ShouldResemble, map[string]int32{"foo": 42})
-					So(value.NestedFixed, ShouldResemble, [3]byte{0x66, 0x6f, 0x6f})
+						}
+						schema := &avroschema.Record{
+							SchemaBase: avroschema.SchemaBase{
+								Type: avroschema.AvroTypeRecord,
+							},
+							NamedType: avroschema.NamedType{
+								Name: "Person",
+							},
+							Fields: []*avroschema.RecordField{
+								{
+									Name: "name",
+									Type: avroschema.AvroTypeString,
+								},
+								{
+									Name: "age",
+									Type: avroschema.AvroTypeInt,
+								},
+							},
+						}
+						data := []byte{0x06, 0x66, 0x6f, 0x6f, 0x54}
+						var value Person
+						err := avro.NewDecoder(bytes.NewReader(data), schema).Decode(&value)
+						So(err, ShouldBeNil)
+						So(value, ShouldResemble, Person{"foo"})
+					})
 				})
 				Convey("array", func() {
 					Convey("nested record", func() {

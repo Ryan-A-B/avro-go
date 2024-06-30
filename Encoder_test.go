@@ -6,8 +6,8 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"tps-git.topcon.com/cloud/avro"
-	"tps-git.topcon.com/cloud/avro/avroschema"
+	"github.com/Ryan-A-B/avro-go"
+	"github.com/Ryan-A-B/avro-go/avroschema"
 )
 
 func TestEncode(t *testing.T) {

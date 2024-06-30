@@ -5,8 +5,8 @@ import (
 	"io"
 	"reflect"
 
-	"tps-git.topcon.com/cloud/avro/avroschema"
-	"tps-git.topcon.com/cloud/avro/internal"
+	"github.com/Ryan-A-B/avro-go/avroschema"
+	"github.com/Ryan-A-B/avro-go/internal"
 )
 
 type Encoder struct {
@@ -240,15 +240,31 @@ func getEncodeFuncForMap(avroMap *avroschema.Map) internal.EncodeFunc {
 func getEncodeFuncForFixed(avroFixed *avroschema.Fixed) internal.EncodeFunc {
 	size := avroFixed.Size
 	return func(writer io.Writer, v interface{}) (err error) {
-		value := v.([]byte)
-		if len(value) != size {
-			return fmt.Errorf("expected %d bytes, got %d", size, len(value))
+		val := reflect.ValueOf(v)
+		if val.Len() != size {
+			return fmt.Errorf("expected %d bytes, got %d", size, val.Len())
 		}
-		_, err = writer.Write(value)
-		if err != nil {
+		switch val.Kind() {
+		case reflect.Array:
+			var addressableArray reflect.Value = val
+			if !val.CanAddr() {
+				addressableArray = reflect.New(reflect.ArrayOf(val.Len(), val.Type().Elem())).Elem()
+				addressableArray.Set(val)
+			}
+			_, err = writer.Write(addressableArray.Slice(0, size).Bytes())
+			if err != nil {
+				return
+			}
 			return
+		case reflect.Slice:
+			_, err = writer.Write(val.Bytes())
+			if err != nil {
+				return
+			}
+			return
+		default:
+			panic(fmt.Errorf("expected an array or slice, got %T", v))
 		}
-		return
 	}
 }
 

@@ -1,4 +1,7 @@
 # Avro Go
+## Issues
+- get(En|De)codeFuncForSchema requires record, enum, array, map and fixed to be pointers
+
 ## Not yet implemented
 ### Binary Encoder
 - pointer receivers

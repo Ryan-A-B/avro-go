@@ -6,7 +6,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"tps-git.topcon.com/cloud/avro/avroschema"
+	"github.com/Ryan-A-B/avro-go/avroschema"
 )
 
 func TestParseSchema(t *testing.T) {

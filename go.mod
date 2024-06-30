@@ -1,4 +1,4 @@
-module tps-git.topcon.com/cloud/avro
+module github.com/Ryan-A-B/avro-go
 
 go 1.13
 

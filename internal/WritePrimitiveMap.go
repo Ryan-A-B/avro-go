@@ -3,7 +3,7 @@ package internal
 import (
 	"io"
 
-	"tps-git.topcon.com/cloud/avro/avroschema"
+	"github.com/Ryan-A-B/avro-go/avroschema"
 )
 
 var EncodeMapByType = map[avroschema.AvroType]EncodeFunc{

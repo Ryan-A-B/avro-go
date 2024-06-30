@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"tps-git.topcon.com/cloud/avro/avroschema"
-	"tps-git.topcon.com/cloud/avro/internal"
+	"github.com/Ryan-A-B/avro-go/avroschema"
+	"github.com/Ryan-A-B/avro-go/internal"
 )
 
 type Decoder struct {
@@ -93,7 +93,11 @@ func getDecodeFuncForRecord(avroRecord *avroschema.Record) internal.DecodeFunc {
 			values[tag] = val.Field(i).Addr().Interface()
 		}
 		for _, frame := range decodeFuncSlice {
-			err = frame.decode(reader, values[frame.name])
+			value, ok := values[frame.name]
+			if !ok {
+				continue
+			}
+			err = frame.decode(reader, value)
 			if err != nil {
 				return
 			}
