@@ -71,12 +71,34 @@ func TestEncode(t *testing.T) {
 				So(buffer.Bytes(), ShouldResemble, []byte{0x06, 0x66, 0x6f, 0x6f})
 			})
 			Convey("string", func() {
-				schema := avroschema.AvroTypeString
-				var buffer bytes.Buffer
-				encoder := avro.NewEncoder(&buffer, schema)
-				err := encoder.Encode("foo")
-				So(err, ShouldBeNil)
-				So(buffer.Bytes(), ShouldResemble, []byte{0x06, 0x66, 0x6f, 0x6f})
+				Convey("string", func() {
+					schema := avroschema.AvroTypeString
+					var buffer bytes.Buffer
+					encoder := avro.NewEncoder(&buffer, schema)
+					err := encoder.Encode("foo")
+					So(err, ShouldBeNil)
+					So(buffer.Bytes(), ShouldResemble, []byte{0x06, 0x66, 0x6f, 0x6f})
+				})
+				Convey("enum", func() {
+					type WaterType string
+					const (
+						Still     WaterType = "still"
+						Sparkling WaterType = "sparkling"
+					)
+					schema := avroschema.AvroTypeString
+					var buffer bytes.Buffer
+					encoder := avro.NewEncoder(&buffer, schema)
+					Convey("still", func() {
+						err := encoder.Encode(Still)
+						So(err, ShouldBeNil)
+						So(buffer.Bytes(), ShouldResemble, []byte{0x0a, 0x73, 0x74, 0x69, 0x6c, 0x6c})
+					})
+					Convey("sparkling", func() {
+						err := encoder.Encode(Sparkling)
+						So(err, ShouldBeNil)
+						So(buffer.Bytes(), ShouldResemble, []byte{0x12, 0x73, 0x70, 0x61, 0x72, 0x6b, 0x6c, 0x69, 0x6e, 0x67})
+					})
+				})
 			})
 		})
 		Convey("complex types", func() {

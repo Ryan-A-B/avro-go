@@ -3,6 +3,7 @@ package internal
 import (
 	"encoding/binary"
 	"io"
+	"reflect"
 )
 
 func WriteNull(writer io.Writer, v interface{}) (err error) {
@@ -68,7 +69,8 @@ func WriteBytes(writer io.Writer, v interface{}) (err error) {
 }
 
 func WriteString(writer io.Writer, v interface{}) (err error) {
-	value := v.(string)
+	val := reflect.ValueOf(v)
+	value := val.String()
 	err = WriteBytes(writer, []byte(value))
 	return
 }

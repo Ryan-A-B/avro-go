@@ -8,6 +8,9 @@ func ReadBooleanArray(reader Reader, v interface{}) (err error) {
 	if err != nil {
 		return
 	}
+	if blockLength == 0 {
+		return
+	}
 	values := make([]bool, 0, blockLength)
 	for blockLength != 0 {
 		for i := int64(0); i < blockLength; i++ {
@@ -31,6 +34,9 @@ func ReadIntArray(reader Reader, v interface{}) (err error) {
 	value := v.(*[]int32)
 	blockLength, err := binary.ReadVarint(reader)
 	if err != nil {
+		return
+	}
+	if blockLength == 0 {
 		return
 	}
 	values := make([]int32, 0, blockLength)
@@ -58,6 +64,9 @@ func ReadLongArray(reader Reader, v interface{}) (err error) {
 	if err != nil {
 		return
 	}
+	if blockLength == 0 {
+		return
+	}
 	values := make([]int64, 0, blockLength)
 	for blockLength != 0 {
 		for i := int64(0); i < blockLength; i++ {
@@ -81,6 +90,9 @@ func ReadFloatArray(reader Reader, v interface{}) (err error) {
 	value := v.(*[]float32)
 	blockLength, err := binary.ReadVarint(reader)
 	if err != nil {
+		return
+	}
+	if blockLength == 0 {
 		return
 	}
 	values := make([]float32, 0, blockLength)
@@ -108,6 +120,9 @@ func ReadDoubleArray(reader Reader, v interface{}) (err error) {
 	if err != nil {
 		return
 	}
+	if blockLength == 0 {
+		return
+	}
 	values := make([]float64, 0, blockLength)
 	for blockLength != 0 {
 		for i := int64(0); i < blockLength; i++ {
@@ -133,6 +148,9 @@ func ReadBytesArray(reader Reader, v interface{}) (err error) {
 	if err != nil {
 		return
 	}
+	if blockLength == 0 {
+		return
+	}
 	values := make([][]byte, 0, blockLength)
 	for blockLength != 0 {
 		for i := int64(0); i < blockLength; i++ {
@@ -156,6 +174,9 @@ func ReadStringArray(reader Reader, v interface{}) (err error) {
 	value := v.(*[]string)
 	blockLength, err := binary.ReadVarint(reader)
 	if err != nil {
+		return
+	}
+	if blockLength == 0 {
 		return
 	}
 	values := make([]string, 0, blockLength)

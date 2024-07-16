@@ -113,7 +113,8 @@ func getEncodeFuncForEnum(avroEnum *avroschema.Enum) internal.EncodeFunc {
 		index[symbol] = i
 	}
 	return func(writer io.Writer, v interface{}) (err error) {
-		value := v.(string)
+		val := reflect.ValueOf(v)
+		value := val.String()
 		i, ok := index[value]
 		if !ok {
 			return fmt.Errorf("symbol %s not found", value)

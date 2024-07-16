@@ -9,12 +9,16 @@ import (
 	"github.com/Ryan-A-B/avro-go/internal"
 )
 
+type AvroReader interface {
+	ReadAvro(Reader) error
+}
+
 type Decoder struct {
-	reader internal.Reader
+	reader Reader
 	decode internal.DecodeFunc
 }
 
-func NewDecoder(reader internal.Reader, schema avroschema.Schema) *Decoder {
+func NewDecoder(reader Reader, schema avroschema.Schema) *Decoder {
 	return &Decoder{
 		reader: reader,
 		decode: getDecodeFuncForSchema(schema),
@@ -22,6 +26,9 @@ func NewDecoder(reader internal.Reader, schema avroschema.Schema) *Decoder {
 }
 
 func (decoder *Decoder) Decode(v interface{}) (err error) {
+	if avroReader, ok := v.(AvroReader); ok {
+		return avroReader.ReadAvro(decoder.reader)
+	}
 	return decoder.decode(decoder.reader, v)
 }
 
@@ -109,7 +116,6 @@ func getDecodeFuncForRecord(avroRecord *avroschema.Record) internal.DecodeFunc {
 func getDecodeFuncForEnum(avroEnum *avroschema.Enum) internal.DecodeFunc {
 	symbols := avroEnum.Symbols
 	return func(reader internal.Reader, v interface{}) (err error) {
-		value := v.(*string)
 		index, err := binary.ReadVarint(reader)
 		if err != nil {
 			return
@@ -118,7 +124,8 @@ func getDecodeFuncForEnum(avroEnum *avroschema.Enum) internal.DecodeFunc {
 			err = fmt.Errorf("invalid enum index %d", index)
 			return
 		}
-		*value = symbols[index]
+		val := reflect.ValueOf(v).Elem()
+		val.SetString(symbols[index])
 		return
 	}
 }
