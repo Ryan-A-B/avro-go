@@ -12,9 +12,9 @@ func WriteBoolean(writer io.ByteWriter, value bool) (err error) {
 	return writer.WriteByte(0)
 }
 
-func WriteInt(writer io.Writer, value int32) (err error) {
+func WriteInt(writer io.Writer, value int32) (n int, err error) {
 	data := make([]byte, binary.MaxVarintLen32)
-	n := binary.PutVarint(data, int64(value))
+	n = binary.PutVarint(data, int64(value))
 	_, err = writer.Write(data[:n])
 	if err != nil {
 		return
@@ -32,12 +32,12 @@ func WriteLong(writer io.Writer, value int64) (n int, err error) {
 	return
 }
 
-func WriteFloat(writer io.Writer, value float32) (err error) {
-	return binary.Write(writer, binary.LittleEndian, value)
+func WriteFloat(writer io.Writer, value float32) (n int, err error) {
+	return 4, binary.Write(writer, binary.LittleEndian, value)
 }
 
-func WriteDouble(writer io.Writer, value float64) (err error) {
-	return binary.Write(writer, binary.LittleEndian, value)
+func WriteDouble(writer io.Writer, value float64) (n int, err error) {
+	return 8, binary.Write(writer, binary.LittleEndian, value)
 }
 
 func WriteBytes(writer io.Writer, value []byte) (nWritten int, err error) {

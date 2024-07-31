@@ -82,7 +82,7 @@ func (header *ObjectContainerHeader) WriteAvro(writer io.Writer) (err error) {
 	if err != nil {
 		return
 	}
-	err = WriteBytesMap(writer, header.Meta)
+	_, err = WriteBytesMap(writer, header.Meta)
 	if err != nil {
 		return
 	}

@@ -35,6 +35,10 @@ func (objectBlock *ObjectBlock) WriteByte(c byte) (err error) {
 	return objectBlock.data.WriteByte(c)
 }
 
+func (objectBlock *ObjectBlock) Size() int {
+	return objectBlock.data.Len()
+}
+
 func (objectBlock *ObjectBlock) Reset() {
 	objectBlock.Length = 0
 	objectBlock.data.Reset()
@@ -44,6 +48,7 @@ func ReadObjectBlock(reader Reader, block *ObjectBlock, expectedSync [16]byte) (
 	err = ReadLong(reader, &block.Length)
 	if err != nil {
 		if err == io.EOF {
+			ok = false
 			err = nil
 		}
 		return

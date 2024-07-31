@@ -26,7 +26,7 @@ func WriteIntArray(writer io.Writer, value []int32) (err error) {
 		return
 	}
 	for _, element := range value {
-		err = WriteInt(writer, element)
+		_, err = WriteInt(writer, element)
 		if err != nil {
 			return
 		}
@@ -62,7 +62,7 @@ func WriteFloatArray(writer io.Writer, value []float32) (err error) {
 		return
 	}
 	for _, element := range value {
-		err = WriteFloat(writer, element)
+		_, err = WriteFloat(writer, element)
 		if err != nil {
 			return
 		}
@@ -80,7 +80,7 @@ func WriteDoubleArray(writer io.Writer, value []float64) (err error) {
 		return
 	}
 	for _, element := range value {
-		err = WriteDouble(writer, element)
+		_, err = WriteDouble(writer, element)
 		if err != nil {
 			return
 		}
@@ -110,18 +110,22 @@ func WriteBytesArray(writer io.Writer, value [][]byte) (err error) {
 	return
 }
 
-func WriteStringArray(writer io.Writer, value []string) (err error) {
-	_, err = WriteLong(writer, int64(len(value)))
+func WriteStringArray(writer io.Writer, value []string) (nTotal int, err error) {
+	var n int
+	n, err = WriteLong(writer, int64(len(value)))
+	nTotal += n
 	if err != nil {
 		return
 	}
 	for _, element := range value {
-		_, err = WriteString(writer, element)
+		n, err = WriteString(writer, element)
+		nTotal += n
 		if err != nil {
 			return
 		}
 	}
-	_, err = WriteLong(writer, 0)
+	n, err = WriteLong(writer, 0)
+	nTotal += n
 	if err != nil {
 		return
 	}
