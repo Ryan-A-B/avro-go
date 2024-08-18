@@ -5,8 +5,8 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/Ryan-A-B/avro-go/avroschema"
 	"github.com/Ryan-A-B/avro-go/internal"
+	"github.com/Ryan-A-B/avro-go/pkg/avroschema"
 )
 
 type Encoder struct {

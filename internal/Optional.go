@@ -1,6 +1,6 @@
 package internal
 
-import "github.com/Ryan-A-B/avro-go/avroschema"
+import "github.com/Ryan-A-B/avro-go/pkg/avroschema"
 
 func IsOptional(avroUnion avroschema.Union) bool {
 	if len(avroUnion) != 2 {

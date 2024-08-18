@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Ryan-A-B/avro-go"
+	"github.com/Ryan-A-B/avro-go/pkg/avro"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

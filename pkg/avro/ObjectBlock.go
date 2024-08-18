@@ -19,6 +19,12 @@ type ObjectBlock struct {
 	data   bytes.Buffer
 }
 
+func NewObjectBlockSize(size int) *ObjectBlock {
+	objectBlock := new(ObjectBlock)
+	objectBlock.data.Grow(size)
+	return objectBlock
+}
+
 func (objectBlock *ObjectBlock) Read(p []byte) (n int, err error) {
 	return objectBlock.data.Read(p)
 }

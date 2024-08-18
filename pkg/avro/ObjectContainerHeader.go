@@ -7,7 +7,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/Ryan-A-B/avro-go/avroschema"
+	"github.com/Ryan-A-B/avro-go/pkg/avroschema"
 )
 
 var expectedMagic = [4]byte{0x4f, 0x62, 0x6a, 0x01}
@@ -20,6 +20,7 @@ type ObjectContainerHeader struct {
 type NewObjectContainerHeaderInput struct {
 	Schema           avroschema.Schema
 	CompressionCodec CompressionCodec
+	Sync             [16]byte
 }
 
 type CompressionCodec string
@@ -40,7 +41,7 @@ func NewObjectContainerHeader(input NewObjectContainerHeaderInput) *ObjectContai
 	meta["avro.codec"] = []byte(input.CompressionCodec)
 	return &ObjectContainerHeader{
 		Meta: meta,
-		Sync: GenerateSync(),
+		Sync: input.Sync,
 	}
 }
 

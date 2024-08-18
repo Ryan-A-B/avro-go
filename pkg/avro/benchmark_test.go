@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/Ryan-A-B/avro-go"
+	"github.com/Ryan-A-B/avro-go/pkg/avro"
 )
 
 func BenchmarkReadBoolean(b *testing.B) {
