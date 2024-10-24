@@ -99,7 +99,7 @@ func WriteObjectBlock(writer io.Writer, block *ObjectBlock, sync [16]byte) (nWri
 func NewCodecWriter(writer io.Writer, codec CompressionCodec) (io.WriteCloser, error) {
 	switch codec {
 	case CompressionCodecNull:
-		return &NopCloser{writer}, nil
+		return &NoOpCloser{writer}, nil
 	case CompressionCodecDeflate:
 		return zlib.NewWriter(writer), nil
 	case CompressionCodecSnappy:

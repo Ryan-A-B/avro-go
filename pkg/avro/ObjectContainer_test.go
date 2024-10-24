@@ -13,6 +13,37 @@ import (
 	"github.com/Ryan-A-B/avro-go/pkg/avroschema"
 )
 
+type Person struct {
+	Name string
+	Age  int32
+}
+
+func (person *Person) WriteAvro(writer avro.Writer) (int, error) {
+	var n int
+	var nTotal int
+	var err error
+	n, err = avro.WriteString(writer, person.Name)
+	nTotal += n
+	if err != nil {
+		return nTotal, err
+	}
+	n, err = avro.WriteInt(writer, person.Age)
+	nTotal += n
+	if err != nil {
+		return nTotal, err
+	}
+	return nTotal, nil
+}
+
+func (person *Person) ReadAvro(reader avro.Reader) error {
+	var err error
+	person.Name, err = avro.ReadString(reader)
+	if err != nil {
+		return err
+	}
+	return avro.ReadInt(reader, &person.Age)
+}
+
 func TestCreateObjectContainerFile(t *testing.T) {
 	nBlocks := 16
 	nObjectsPerBlock := 1024
@@ -36,8 +67,8 @@ func TestCreateObjectContainerFile(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer file.Close()
-		writer := bufio.NewWriter(file)
-		defer writer.Flush()
+		bufferedFileWriter := bufio.NewWriter(file)
+		defer bufferedFileWriter.Flush()
 		schema, err := avroschema.ParseSchema([]byte(`{
 			"type": "record",
 			"name": "Person",
@@ -49,20 +80,25 @@ func TestCreateObjectContainerFile(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		type Person struct {
-			Name string `avro:"name"`
-			Age  int32  `avro:"age"`
-		}
 		header := avro.NewObjectContainerHeader(avro.NewObjectContainerHeaderInput{
 			Schema:           schema,
 			CompressionCodec: codec,
 		})
-		err = header.WriteAvro(writer)
+		err = header.WriteAvro(bufferedFileWriter)
 		if err != nil {
 			t.Fatal(err)
 		}
+		var people []Person
+		nPeople := 16
+		for i := 0; i < nPeople; i++ {
+			person := Person{
+				Name: generateRandomString(64),
+				Age:  rand.Int31(),
+			}
+			people = append(people, person)
+		}
 		var block avro.ObjectBlock
-		encoder := avro.NewEncoder(&block, schema)
+		bufferedCodecWriter := bufio.NewWriter(nil)
 		for i := 0; i < nBlocks; i++ {
 			block.Reset()
 			var wc io.WriteCloser
@@ -70,21 +106,24 @@ func TestCreateObjectContainerFile(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			bufferedCodecWriter.Reset(wc)
 			for j := 0; j < nObjectsPerBlock; j++ {
-				err = encoder.Encode(Person{
-					Name: generateRandomString(64),
-					Age:  rand.Int31(),
-				})
+				person := people[rand.Intn(nPeople)]
+				_, err = person.WriteAvro(bufferedCodecWriter)
 				if err != nil {
 					t.Fatal(err)
 				}
 				block.Length++
 			}
+			err = bufferedCodecWriter.Flush()
+			if err != nil {
+				t.Fatal(err)
+			}
 			err = wc.Close()
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = avro.WriteObjectBlock(writer, &block, header.Sync)
+			_, err = avro.WriteObjectBlock(bufferedFileWriter, &block, header.Sync)
 			if err != nil {
 				t.Fatal(err)
 			}
