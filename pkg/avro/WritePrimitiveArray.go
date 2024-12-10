@@ -1,6 +1,8 @@
 package avro
 
-import "io"
+import (
+	"io"
+)
 
 func WriteBooleanArray(writer Writer, value []bool) (err error) {
 	_, err = WriteLong(writer, int64(len(value)))
@@ -74,22 +76,28 @@ func WriteFloatArray(writer io.Writer, value []float32) (err error) {
 	return
 }
 
-func WriteDoubleArray(writer io.Writer, value []float64) (err error) {
-	_, err = WriteLong(writer, int64(len(value)))
+func WriteDoubleArray(writer io.Writer, value []float64) (int, error) {
+	var nTotal int
+	var err error
+	var n int
+	n, err = WriteLong(writer, int64(len(value)))
+	nTotal += n
 	if err != nil {
-		return
+		return nTotal, err
 	}
 	for _, element := range value {
-		_, err = WriteDouble(writer, element)
+		n, err = WriteDouble(writer, element)
+		nTotal += n
 		if err != nil {
-			return
+			return nTotal, err
 		}
 	}
-	_, err = WriteLong(writer, 0)
+	n, err = WriteLong(writer, 0)
+	nTotal += n
 	if err != nil {
-		return
+		return nTotal, err
 	}
-	return
+	return nTotal, nil
 }
 
 func WriteBytesArray(writer io.Writer, value [][]byte) (err error) {

@@ -1,169 +1,32 @@
 package avro
 
-func ReadBooleanArray(reader Reader, values *[]bool) (err error) {
+func ReadDoubleArray(reader Reader, values []float64) (err error) {
 	var length int64
 	err = ReadLong(reader, &length)
 	if err != nil {
 		return
 	}
-	*values = make([]bool, length)
+	totalLength := 0
 	for length > 0 {
-		for i := 0; i < int(length); i++ {
-			var value bool
-			err = ReadBoolean(reader, &value)
-			if err != nil {
-				return
-			}
-			(*values)[i] = value
+		totalLength += int(length)
+		if totalLength > len(values) {
+			panic("array length exceeds slice length")
 		}
-		err = ReadLong(reader, &length)
-		if err != nil {
-			return err
-		}
-	}
-	return
-}
-
-func ReadIntArray(reader Reader, values *[]int32) (err error) {
-	var length int64
-	err = ReadLong(reader, &length)
-	if err != nil {
-		return
-	}
-	*values = make([]int32, length)
-	for length > 0 {
-		for i := 0; i < int(length); i++ {
-			var value int32
-			err = ReadInt(reader, &value)
-			if err != nil {
-				return
-			}
-			(*values)[i] = value
-		}
-		err = ReadLong(reader, &length)
-		if err != nil {
-			return err
-		}
-	}
-	return
-}
-
-func ReadLongArray(reader Reader, values *[]int64) (err error) {
-	var length int64
-	err = ReadLong(reader, &length)
-	if err != nil {
-		return
-	}
-	*values = make([]int64, length)
-	for length > 0 {
-		for i := 0; i < int(length); i++ {
-			var value int64
-			err = ReadLong(reader, &value)
-			if err != nil {
-				return
-			}
-			(*values)[i] = value
-		}
-		err = ReadLong(reader, &length)
-		if err != nil {
-			return err
-		}
-	}
-	return
-}
-
-func ReadFloatArray(reader Reader, values *[]float32) (err error) {
-	var length int64
-	err = ReadLong(reader, &length)
-	if err != nil {
-		return
-	}
-	*values = make([]float32, length)
-	for length > 0 {
-		for i := 0; i < int(length); i++ {
-			var value float32
-			err = ReadFloat(reader, &value)
-			if err != nil {
-				return
-			}
-			(*values)[i] = value
-		}
-		err = ReadLong(reader, &length)
-		if err != nil {
-			return err
-		}
-	}
-	return
-}
-
-func ReadDoubleArray(reader Reader, values *[]float64) (err error) {
-	var length int64
-	err = ReadLong(reader, &length)
-	if err != nil {
-		return
-	}
-	*values = make([]float64, length)
-	for length > 0 {
 		for i := 0; i < int(length); i++ {
 			var value float64
 			err = ReadDouble(reader, &value)
 			if err != nil {
 				return
 			}
-			(*values)[i] = value
+			values[i] = value
 		}
 		err = ReadLong(reader, &length)
 		if err != nil {
 			return err
 		}
 	}
-	return
-}
-
-func ReadBytesArray(reader Reader, values *[][]byte) (err error) {
-	var length int64
-	err = ReadLong(reader, &length)
-	if err != nil {
-		return
-	}
-	*values = make([][]byte, length)
-	for length > 0 {
-		for i := 0; i < int(length); i++ {
-			var value []byte
-			value, err = ReadBytes(reader)
-			if err != nil {
-				return
-			}
-			(*values)[i] = value
-		}
-		err = ReadLong(reader, &length)
-		if err != nil {
-			return err
-		}
-	}
-	return
-}
-
-func ReadStringArray(reader Reader, values *[]string) (err error) {
-	var length int64
-	err = ReadLong(reader, &length)
-	if err != nil {
-		return
-	}
-	*values = make([]string, length)
-	for length > 0 {
-		for i := 0; i < int(length); i++ {
-			var value string
-			value, err = ReadString(reader)
-			if err != nil {
-				return
-			}
-			(*values)[i] = value
-		}
-		err = ReadLong(reader, &length)
-		if err != nil {
-			return err
-		}
+	if totalLength != len(values) {
+		panic("array length does not match slice length")
 	}
 	return
 }
